@@ -26,7 +26,7 @@ namespace BigLobby.Patches
                     __instance.allPlayerObjects[i] = newPlayer;
                     __instance.allPlayerScripts[i] = newScript;
                     newPlayer.name = $"ExtraPlayer{i}";
-                    newScript.playerClientId = i;
+                    newScript.playerClientId = (ulong)i;
                     netObject.Spawn();
                 }
             }
@@ -37,7 +37,7 @@ namespace BigLobby.Patches
                 {
                     if (script.playerClientId < 4) continue;
                     var player = script.gameObject;
-                    var index = int.Parse(player.name[-1]);
+                    var index = ulong.Parse(player.name[-1].ToString());
                     script.playerClientId = index;
                     __instance.allPlayerObjects[index] = player;
                     __instance.allPlayerScripts[index] = script;
