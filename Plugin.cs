@@ -7,6 +7,8 @@ namespace BigLobby
     [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
     public class Plugin : BaseUnityPlugin
     {
+        public static int MaxPlayers = 8;
+
         private Harmony harmony;
         private void Awake()
         {
