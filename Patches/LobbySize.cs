@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace BigLobby.Patches
 {
+    [HarmonyPatch]
     internal class LobbySize
     {
         [HarmonyPatch(typeof(SteamMatchmaking), nameof(SteamMatchmaking.CreateLobbyAsync))]
