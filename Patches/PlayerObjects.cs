@@ -31,7 +31,7 @@ namespace BigLobby.Patches
         [HarmonyPatch(typeof(StartOfRound), "Start")]
         [HarmonyPrefix]
         public static void AddPlayers(ref StartOfRound __instance) {
-            var playerPrefab = __instance.allPlayerObjects[1];//__instance.playerPrefab;
+            var playerPrefab = __instance.playerPrefab;
             var playerContainer = __instance.allPlayerObjects[1].transform.parent;
             for (int i = 0; i < Plugin.MaxPlayers; i++)
             {
