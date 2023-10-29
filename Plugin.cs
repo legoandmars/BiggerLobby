@@ -1,14 +1,18 @@
 ﻿using BepInEx;
+using HarmonyLib;
+using System.Reflection;
 
 namespace BigLobby
 {
     [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
     public class Plugin : BaseUnityPlugin
     {
+        private Harmony harmony;
         private void Awake()
         {
-            // Plugin startup logic
-            Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
+            Logger.LogInfo($"{PluginInfo.PLUGIN_GUID} loaded");
+
+            harmony = Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly());
         }
     }
 }

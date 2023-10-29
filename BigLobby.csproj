@@ -13,6 +13,18 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>../../Managed/Assembly-CSharp.dll</HintPath>
     </Reference>
+    <Reference Include="Facepunch.Steamworks.Win64">
+      <HintPath>../../Managed/Facepunch.Steamworks.Win64.dll</HintPath>
+    </Reference>
+    <Reference Include="Facepunch Transport for Netcode for GameObjects">
+      <HintPath>../../Managed/Facepunch Transport for Netcode for GameObjects.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.Netcode.Components">
+      <HintPath>../../Managed/Unity.Netcode.Components.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.Netcode.Runtime">
+      <HintPath>../../Managed/Unity.Netcode.Runtime.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>
