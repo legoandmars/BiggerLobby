@@ -5,18 +5,14 @@ using UnityEngine;
 
 namespace BigLobby.Patches
 {
-    [HarmonyPatch(typeof(SteamMatchmaking))]
-    internal class SteamLobbySize
+    internal class LobbySize
     {
-        [HarmonyPatch(nameof(SteamMatchmaking.CreateLobbyAsync))]
+        [HarmonyPatch(typeof(SteamMatchmaking), nameof(SteamMatchmaking.CreateLobbyAsync))]
         [HarmonyPrefix]
         public static void SetMaxMembers(ref int maxMembers) {
             maxMembers = Plugin.MaxPlayers;
         }
-    }
-    [HarmonyPatch(typeof(GameNetworkManager))]
-    internal class LobbyJoinable {
-        [HarmonyPatch(nameof(GameNetworkManager.LobbyDataIsJoinable))]
+        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.LobbyDataIsJoinable))]
         [HarmonyPrefix]
         public static bool SkipLobbySizeCheck(ref GameNetworkManager __instance, ref bool __result, Lobby lobby) {
             string data = lobby.GetData("vers");

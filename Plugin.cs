@@ -12,9 +12,10 @@ namespace BigLobby
         private Harmony _harmony;
         private void Awake()
         {
-            Logger.LogInfo($"{PluginInfo.PLUGIN_GUID} loaded");
+            _harmony = new Harmony(PluginInfo.PLUGIN_GUID);
+            _harmony.PatchAll();
 
-            _harmony = Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly());
+            Logger.LogInfo($"{PluginInfo.PLUGIN_GUID} loaded");
         }
     }
 }
