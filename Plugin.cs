@@ -9,12 +9,12 @@ namespace BigLobby
     {
         public static int MaxPlayers = 8;
 
-        private Harmony harmony;
+        private Harmony _harmony;
         private void Awake()
         {
             Logger.LogInfo($"{PluginInfo.PLUGIN_GUID} loaded");
 
-            harmony = Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly());
+            _harmony = Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly());
         }
     }
 }
