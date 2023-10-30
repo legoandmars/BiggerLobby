@@ -29,21 +29,24 @@ namespace BigLobby.Patches
                 ___playerVoicePitches[i] = 1f;
             }
         }
+        private static StartOfRound startOfRound;
+        private static bool instantiating = false;
+        private static int nextClientId = 0;
+        private static PlayerControllerB referencePlayer;
         [HarmonyPatch(typeof(StartOfRound), "Start")]
         [HarmonyPrefix]
         public static void AddPlayers(ref StartOfRound __instance) {
-            var playerPrefab = __instance.allPlayerObjects[0];//__instance.playerPrefab;
-            var playerContainer = __instance.allPlayerObjects[1].transform.parent;
+            startOfRound = __instance;
+            referencePlayer = __instance.allPlayerObjects[0].GetComponent<PlayerControllerB>();
+            var playerPrefab = __instance.playerPrefab;
+            var playerContainer = __instance.allPlayerObjects[0].transform.parent;
+            instantiating = true;
             for (int i = 0; i < Plugin.MaxPlayers; i++)
             {
+                nextClientId = i;
                 var newPlayer = GameObject.Instantiate<GameObject>(playerPrefab, playerContainer);
                 var newScript = newPlayer.GetComponent<PlayerControllerB>();
                 var netObject = newPlayer.GetComponent<NetworkObject>();
-                __instance.allPlayerObjects[i] = newPlayer;
-                __instance.allPlayerScripts[i] = newScript;
-                newPlayer.name = $"ExtraPlayer{i}";
-                newScript.playersManager = __instance;
-                newScript.playerClientId = (ulong)i;
                 var spawnMethod = typeof(NetworkSpawnManager).GetMethod(
                     "SpawnNetworkObjectLocally",
                     BindingFlags.Instance | BindingFlags.NonPublic,
@@ -61,6 +64,24 @@ namespace BigLobby.Patches
                     true
                 });
             }
+            instantiating = false;
+        }
+        [HarmonyPatch(typeof(PlayerControllerB), "Awake")]
+        [HarmonyPrefix]
+        public static void FixPlayerObject(ref PlayerControllerB __instance) {
+            if (!instantiating) return;
+            startOfRound.allPlayerObjects[nextClientId] = __instance.gameObject;
+            startOfRound.allPlayerScripts[nextClientId] = __instance;
+            __instance.gameObject.name = $"ExtraPlayer{nextClientId}";
+            __instance.playerClientId = (ulong)nextClientId;
+            var fields = typeof(PlayerControllerB).GetFields();
+            foreach (FieldInfo field in fields) {
+                var myValue = field.GetValue(__instance);
+                var referenceValue = field.GetValue(referencePlayer);
+                if (myValue == null && referenceValue != null)
+                    field.SetValue(__instance, referenceValue);
+            }
+            __instance.enabled = true;
         }
     }
 }
