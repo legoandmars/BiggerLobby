@@ -3,6 +3,7 @@ using HarmonyLib;
 using Unity.Netcode;
 using UnityEngine;
 using System.Reflection;
+using System;
 
 namespace BigLobby.Patches
 {
@@ -31,11 +32,11 @@ namespace BigLobby.Patches
         [HarmonyPatch(typeof(StartOfRound), "Start")]
         [HarmonyPrefix]
         public static void AddPlayers(ref StartOfRound __instance) {
-            var playerPrefab = __instance.playerPrefab;
+            var playerPrefab = __instance.allPlayerObjects[0];//__instance.playerPrefab;
             var playerContainer = __instance.allPlayerObjects[1].transform.parent;
             for (int i = 0; i < Plugin.MaxPlayers; i++)
             {
-                var newPlayer = Object.Instantiate<GameObject>(playerPrefab, playerContainer);
+                var newPlayer = GameObject.Instantiate<GameObject>(playerPrefab, playerContainer);
                 var newScript = newPlayer.GetComponent<PlayerControllerB>();
                 var netObject = newPlayer.GetComponent<NetworkObject>();
                 __instance.allPlayerObjects[i] = newPlayer;
@@ -43,9 +44,22 @@ namespace BigLobby.Patches
                 newPlayer.name = $"ExtraPlayer{i}";
                 newScript.playersManager = __instance;
                 newScript.playerClientId = (ulong)i;
-                newScript.enabled = true;
-                var idProperty = typeof(NetworkObject).GetProperty("NetworkObjectId");
-                idProperty.SetValue(netObject, (ulong)(35 + i));
+                var spawnMethod = typeof(NetworkSpawnManager).GetMethod(
+                    "SpawnNetworkObjectLocally",
+                    BindingFlags.Instance | BindingFlags.NonPublic,
+                    null,
+                    CallingConventions.Any,
+                    new Type[]{typeof(NetworkObject), typeof(ulong), typeof(bool), typeof(bool), typeof(ulong), typeof(bool)},
+                    null
+                );
+                spawnMethod.Invoke(NetworkManager.Singleton.SpawnManager, new object[]{
+                    netObject,
+                    1234567890ul + (ulong)i,
+                    true,
+                    false,
+                    netObject.OwnerClientId,
+                    true
+                });
             }
         }
     }
