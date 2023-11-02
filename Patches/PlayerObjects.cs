@@ -40,6 +40,14 @@ namespace BigLobby.Patches
             referencePlayer = __instance.allPlayerObjects[0].GetComponent<PlayerControllerB>();
             var playerPrefab = __instance.playerPrefab;
             var playerContainer = __instance.allPlayerObjects[0].transform.parent;
+            var spawnMethod = typeof(NetworkSpawnManager).GetMethod(
+                "SpawnNetworkObjectLocally",
+                BindingFlags.Instance | BindingFlags.NonPublic,
+                null,
+                CallingConventions.Any,
+                new Type[]{typeof(NetworkObject), typeof(ulong), typeof(bool), typeof(bool), typeof(ulong), typeof(bool)},
+                null
+            );
             instantiating = true;
             for (int i = 0; i < Plugin.MaxPlayers; i++)
             {
@@ -47,14 +55,7 @@ namespace BigLobby.Patches
                 var newPlayer = GameObject.Instantiate<GameObject>(playerPrefab, playerContainer);
                 var newScript = newPlayer.GetComponent<PlayerControllerB>();
                 var netObject = newPlayer.GetComponent<NetworkObject>();
-                var spawnMethod = typeof(NetworkSpawnManager).GetMethod(
-                    "SpawnNetworkObjectLocally",
-                    BindingFlags.Instance | BindingFlags.NonPublic,
-                    null,
-                    CallingConventions.Any,
-                    new Type[]{typeof(NetworkObject), typeof(ulong), typeof(bool), typeof(bool), typeof(ulong), typeof(bool)},
-                    null
-                );
+                Debug.Log("[BigLobby] Trying to spawn new player");
                 spawnMethod.Invoke(NetworkManager.Singleton.SpawnManager, new object[]{
                     netObject,
                     1234567890ul + (ulong)i,
