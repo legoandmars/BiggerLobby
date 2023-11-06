@@ -6,7 +6,7 @@ using GameNetcodeStuff;
 using HarmonyLib;
 using BepInEx;
 using UnityEngine;
-namespace BigLobby.Patches
+namespace BiggerLobby.Patches
 {
     [HarmonyPatch]
     public class ListSizeTranspilers {
@@ -221,10 +221,9 @@ namespace BigLobby.Patches
             var codes = new List<CodeInstruction>(instructions);
             for (int i = 0; i < codes.Count; i++)
             {
-                if (codes[i].opcode == OpCodes.Ldc_I4_4)
+                if (codes[i].opcode == OpCodes.Stfld)
                 {
-                    codes[i].opcode = OpCodes.Ldc_I4_S;
-                        codes[i].operand = Plugin.MaxPlayers;
+                    Debug.Log(codes[i].operand);   
                 }
             }
             return codes.AsEnumerable();
