@@ -5,7 +5,7 @@ using Steamworks.Data;
 using System;
 using UnityEngine;
 
-namespace BigLobby.Patches
+namespace BiggerLobby.Patches
 {
     [HarmonyPatch]
     internal class LobbySize
