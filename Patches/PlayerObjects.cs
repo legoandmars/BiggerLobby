@@ -18,13 +18,13 @@ using BepInEx;
 using UnityEngine.UIElements;
 using System.Text.RegularExpressions;
 
-namespace BigLobby.Patches
+namespace BiggerLobby.Patches
 {
     [HarmonyPatch]
     internal class PlayerObjects
     {
         [HarmonyPatch(typeof(StartOfRound), "Awake")]
-        [HarmonyPostfix]
+        [HarmonyPrefix]
         public static void ResizeLists(ref StartOfRound __instance)
         {
             __instance.allPlayerObjects = Helper.ResizeArray(__instance.allPlayerObjects, Plugin.MaxPlayers);
@@ -94,6 +94,7 @@ namespace BigLobby.Patches
             rt8.anchoredPosition = new Vector2(rt8.anchoredPosition.x, -23);
             rt9.anchoredPosition = new Vector2(rt9.anchoredPosition.x, 21);
             rt9.name = "ServerPlayersField";
+            rt9.GetComponent<TMP_InputField>().contentType = TMP_InputField.ContentType.IntegerNumber;
             rt9.transform.Find("Text Area").Find("Placeholder").gameObject.GetComponent<TextMeshProUGUI>().text = "Max players...";
             rt9.transform.parent = __instance.HostSettingsOptionsNormal.transform;
             Debug.Log("ok!");
@@ -271,7 +272,7 @@ namespace BigLobby.Patches
                 var netObject = newPlayer.GetComponent<NetworkObject>();
                 newScript.TeleportPlayer(StartOfRound.Instance.notSpawnedPosition.position);
                 Debug.Log(netObject.OwnerClientId);
-                Debug.Log("[BigLobby] Trying to spawn new player");
+                Debug.Log("[BiggerLobby] Trying to spawn new player");
                 __instance.allPlayerObjects[i] = newPlayer;
                 __instance.allPlayerScripts[i] = newScript;
                 (typeof(NetworkObject)).GetProperty("NetworkObjectId", BindingFlags.Instance | BindingFlags.Public).SetValue(netObject, (uint)1234567890ul + (ulong)i);
@@ -291,7 +292,7 @@ namespace BigLobby.Patches
 
         public static bool ShitAssFix(ref PlayerControllerB __instance)
         {
-            if (__instance.transform.parent.gameObject.name == "HangarShip" && !__instance.disconnectedMidGame) {
+            if (__instance.transform.parent.gameObject.name == "HangarShip" && !__instance.disconnectedMidGame && !__instance.isPlayerDead) {
                 __instance.isPlayerControlled = true;
             }
             return (true);
