@@ -209,7 +209,6 @@ namespace BiggerLobby.Patches
                 if (codes[i].opcode == OpCodes.Blt)
                 {
                     codes[i].opcode = OpCodes.Bgt;
-                    //break;see if i care bozo ! ratio ecksdee blehj.
                 }
             }
             return codes.AsEnumerable();
