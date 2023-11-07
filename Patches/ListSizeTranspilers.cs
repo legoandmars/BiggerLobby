@@ -221,7 +221,7 @@ namespace BiggerLobby.Patches
             var codes = new List<CodeInstruction>(instructions);
             for (int i = 0; i < codes.Count; i++)
             {
-                if (codes[i].opcode == OpCodes.Ldc_I4_1)
+                if (codes[i].opcode == OpCodes.Ldc_I4_4)
                 {
                     codes[i].opcode = OpCodes.Ldc_I4_S;
                     codes[i].operand = Plugin.MaxPlayers;
