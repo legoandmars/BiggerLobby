@@ -103,6 +103,10 @@ namespace BiggerLobby.Patches
         [HarmonyPrefix]
         public static bool StartHost(MenuManager __instance)
         {
+            if (GameNetworkManager.Instance.currentLobby == null)
+            {
+                return (true);
+            }
             GameObject SPF = __instance.HostSettingsOptionsNormal.transform.Find("ServerPlayersField").gameObject;
             Debug.Log(SPF);
             GameObject Input = SPF.transform.Find("Text Area").Find("Text").gameObject;
@@ -222,12 +226,14 @@ namespace BiggerLobby.Patches
         {
             __instance. playerVoicePitchLerpSpeed = new float[Plugin.MaxPlayers + 1];
             __instance.playerVoicePitchTargets = new float[Plugin.MaxPlayers + 1];
+            __instance.playerVoiceVolumes = new float[Plugin.MaxPlayers + 1];
             __instance.playerVoicePitches = new float[Plugin.MaxPlayers+1];
             for (int i = 1; i < Plugin.MaxPlayers+1; i++)
             {
                 __instance.playerVoicePitchLerpSpeed[i] = 3f;
                 __instance.playerVoicePitchTargets[i] = 1f;
                 __instance.playerVoicePitches[i] = 1f;
+                __instance.playerVoiceVolumes[i] = 1f;
             }
         }
         [HarmonyPatch(typeof(StartOfRound), "EndOfGame")]
@@ -254,7 +260,7 @@ namespace BiggerLobby.Patches
             startOfRound = __instance;
             referencePlayer = __instance.allPlayerObjects[0].GetComponent<PlayerControllerB>();
             var playerPrefab = __instance.playerPrefab;
-            var playerContainer = __instance.allPlayerObjects[0].transform.parent;
+            var playerContainer = __instance.playersContainer.transform;
             var spawnMethod = typeof(NetworkSpawnManager).GetMethod(
                 "SpawnNetworkObjectLocally",
                 BindingFlags.Instance | BindingFlags.NonPublic,
@@ -284,6 +290,12 @@ namespace BiggerLobby.Patches
                         netObject.OwnerClientId,
                         false
                     });
+                ManualCameraRenderer[] deezlist = UnityEngine.Object.FindObjectsByType<ManualCameraRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                for (int j = 0; j < deezlist.Length; j++)
+                {
+                    ManualCameraRenderer CR = deezlist[j];
+                    CR.AddTransformAsTargetToRadar(newScript.transform, "Player #" + j.ToString(), false);
+                }
             }
             instantiating = false;
         }
@@ -296,7 +308,41 @@ namespace BiggerLobby.Patches
                 __instance.isPlayerControlled = true;
             }
             return (true);
-        }//Bizzlemip rolls worlds shittiest PATCH. Asked to leave MODDING COMMUNITY
+        }
+        [HarmonyPatch(typeof(QuickMenuManager), "Start")]
+        [HarmonyPrefix]
+
+        public static bool Fuckyourplayerlist(ref QuickMenuManager __instance)
+        {
+            __instance.playerListSlots = Helper.ResizeArray(__instance.playerListSlots, Plugin.MaxPlayers);
+            for (int i = 4; i < Plugin.MaxPlayers; i++)
+            {
+                PlayerListSlot TheBalls = new PlayerListSlot();
+                TheBalls.slotContainer = __instance.playerListSlots[0].slotContainer;
+                TheBalls.volumeSliderContainer = __instance.playerListSlots[0].volumeSliderContainer;
+                TheBalls.KickUserButton = __instance.playerListSlots[0].KickUserButton;
+                TheBalls.isConnected = false;
+                TheBalls.usernameHeader = __instance.playerListSlots[0].usernameHeader;
+                TheBalls.volumeSlider = __instance.playerListSlots[0].volumeSlider;
+                TheBalls.playerSteamId = __instance.playerListSlots[0].playerSteamId;
+                __instance.playerListSlots[i] = TheBalls;
+            }
+            __instance.playerListPanel.SetActive(false);
+            return (true);
+        }
+        [HarmonyPatch(typeof(ManualCameraRenderer), "Awake")]
+        [HarmonyPrefix]
+
+        public static bool Mawake(ref ManualCameraRenderer __instance)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                __instance.radarTargets.Add(new TransformAndName(StartOfRound.Instance.allPlayerScripts[i].transform, StartOfRound.Instance.allPlayerScripts[i].playerUsername));
+            }
+            __instance.targetTransformIndex = 0;
+            __instance.targetedPlayer = StartOfRound.Instance.allPlayerScripts[0];
+            return (false);
+        }//I got a glock in my rari
 
         [HarmonyPatch(typeof(PlayerControllerB), "Awake")]
         [HarmonyPrefix]
