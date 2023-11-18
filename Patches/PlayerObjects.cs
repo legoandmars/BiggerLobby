@@ -1,4 +1,5 @@
 using GameNetcodeStuff;
+using System.Numerics;
 using HarmonyLib;
 using Unity.Netcode;
 using UnityEngine;
@@ -17,6 +18,10 @@ using Steamworks;
 using BepInEx;
 using UnityEngine.UIElements;
 using System.Text.RegularExpressions;
+using Dissonance.Integrations.Unity_NFGO;
+using Unity.Collections;
+using System.Runtime.CompilerServices;
+using UnityEngine.SceneManagement;
 
 namespace BiggerLobby.Patches
 {
@@ -36,9 +41,6 @@ namespace BiggerLobby.Patches
                 __instance.gameStats.allPlayerStats[j] = new PlayerStats();
                 __instance.playerSpawnPositions[j] = __instance.playerSpawnPositions[0];
             }
-            Debug.Log(__instance.playerSpawnPositions.Length);
-            Debug.Log("Yeahg");
-            Debug.Log(__instance.allPlayerScripts.Length);
         }
         [HarmonyPatch(typeof(ForestGiantAI), "Start")]
         [HarmonyPrefix]
@@ -57,158 +59,7 @@ namespace BiggerLobby.Patches
                 __instance.playerLevels[j] = new PlayerLevel();
             }
         }
-        [HarmonyPatch(typeof(MenuManager), "OnEnable")]
-        [HarmonyPostfix]
-        public static void CustomMenu(ref MenuManager __instance)
-        {
-            if (__instance.isInitScene)
-            {
-                return;
-            }
-            GameObject p = __instance.HostSettingsOptionsNormal.transform.parent.parent.gameObject;
-            RectTransform rt = p.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p2 = p.transform.Find("PrivatePublicDescription").gameObject;
-            RectTransform rt2 = p2.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p3 = __instance.HostSettingsOptionsNormal.transform.Find("EnterAName").gameObject;
-            RectTransform rt3 = p3.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p4 = __instance.HostSettingsOptionsNormal.transform.Find("ServerNameField").gameObject;
-            RectTransform rt4 = p4.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p5 = p.transform.Find("Confirm").gameObject;
-            RectTransform rt5 = p5.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p6 = p.transform.Find("Back").gameObject;
-            RectTransform rt6 = p6.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p7 = __instance.HostSettingsOptionsNormal.transform.Find("Public").gameObject;
-            RectTransform rt7 = p7.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p8 = __instance.HostSettingsOptionsNormal.transform.Find("Private").gameObject;
-            RectTransform rt8 = p8.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p9 = UnityEngine.Object.Instantiate(p4,p4.transform.parent);
-            RectTransform rt9 = p9.GetComponent(typeof(RectTransform)) as RectTransform;
-            Debug.Log("yeah!!");
-            rt.sizeDelta = new Vector2(rt.sizeDelta.x, 200);
-            rt2.anchoredPosition = new Vector2(rt2.anchoredPosition.x, -50);
-            rt3.anchoredPosition = new Vector2(rt3.anchoredPosition.x, 40);
-            rt4.anchoredPosition = new Vector2(rt4.anchoredPosition.x, 55);
-            rt5.anchoredPosition = new Vector2(rt5.anchoredPosition.x, -60);
-            rt6.anchoredPosition = new Vector2(rt6.anchoredPosition.x, -85);
-            rt7.anchoredPosition = new Vector2(rt7.anchoredPosition.x, -23);
-            rt8.anchoredPosition = new Vector2(rt8.anchoredPosition.x, -23);
-            rt9.anchoredPosition = new Vector2(rt9.anchoredPosition.x, 21);
-            rt9.name = "ServerPlayersField";
-            rt9.GetComponent<TMP_InputField>().contentType = TMP_InputField.ContentType.IntegerNumber;
-            rt9.transform.Find("Text Area").Find("Placeholder").gameObject.GetComponent<TextMeshProUGUI>().text = "Max players...";
-            rt9.transform.parent = __instance.HostSettingsOptionsNormal.transform;
-            Debug.Log("ok!");
-        }
-        [HarmonyPatch(typeof(MenuManager), "StartHosting")]
-        [HarmonyPrefix]
-        public static bool StartHost(MenuManager __instance)
-        {
-            if (GameNetworkManager.Instance.currentLobby == null)
-            {
-                return (true);
-            }
-            GameObject SPF = __instance.HostSettingsOptionsNormal.transform.Find("ServerPlayersField").gameObject;
-            Debug.Log(SPF);
-            GameObject Input = SPF.transform.Find("Text Area").Find("Text").gameObject;
-            Debug.Log(Input);
-            TextMeshProUGUI iTextMeshProUGUI = Input.GetComponent<TextMeshProUGUI>();
-            Debug.Log(iTextMeshProUGUI);
-            string text = Regex.Replace(iTextMeshProUGUI.text, "[^0-9]", "");
-            Debug.Log(text);
-            int newnumber;
-            if (!(int.TryParse(text, out newnumber)))
-            {
-                Debug.Log(newnumber);
-                newnumber = 20;
-            }
-            newnumber = Math.Min(Math.Max(newnumber, 4),20);
-            Debug.Log(newnumber);
-            Lobby lobby = GameNetworkManager.Instance.currentLobby ?? new Lobby();//fuck ittttt
-            lobby.SetData("MaxPlayers", newnumber.ToString());
-            return (true);
 
-        }
-        [HarmonyPatch(typeof(SteamLobbyManager),"LoadServerList")]
-        [HarmonyPrefix]
-        public async static void LoadServerList(SteamLobbyManager __instance )
-        {
-            Debug.Log("hai");
-            if (GameNetworkManager.Instance.waitingForLobbyDataRefresh)
-            {
-                return;
-            }
-            Debug.Log(typeof(SteamLobbyManager).GetField("refreshServerListTimer", BindingFlags.NonPublic | BindingFlags.Instance));
-            typeof(SteamLobbyManager).GetField("refreshServerListTimer", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(__instance, 0f);
-            __instance.serverListBlankText.text = "Loading server list...";
-            FieldInfo LL = typeof(SteamLobbyManager).GetField("currentLobbyList", BindingFlags.NonPublic | BindingFlags.Instance);
-            FieldInfo LP = typeof(SteamLobbyManager).GetField("lobbySlotPositionOffset", BindingFlags.NonPublic | BindingFlags.Instance);
-            LL.SetValue(__instance, null);
-            LobbySlot[] array = UnityEngine.Object.FindObjectsOfType<LobbySlot>();
-            for (int i = 0; i < array.Length; i++)
-            {
-                UnityEngine.Object.Destroy(array[i].gameObject);
-            }
-            switch (__instance.sortByDistanceSetting)
-            {
-                case 0:
-                    SteamMatchmaking.LobbyList.FilterDistanceClose();
-                    break;
-                case 1:
-                    SteamMatchmaking.LobbyList.FilterDistanceFar();
-                    break;
-                case 2:
-                    SteamMatchmaking.LobbyList.FilterDistanceWorldwide();
-                    break;
-            }
-            Debug.Log("Requested serv!er list");
-            Debug.Log("WHY");
-
-            GameNetworkManager.Instance.waitingForLobbyDataRefresh = true;
-            Debug.Log("ok");
-            Lobby[] results = await SteamMatchmaking.LobbyList.WithSlotsAvailable(1).WithKeyValue("vers", GameNetworkManager.Instance.gameVersionNum.ToString()).RequestAsync();
-            Debug.Log(results);
-            LL.SetValue(__instance, results);
-            GameNetworkManager.Instance.waitingForLobbyDataRefresh = false;
-            Debug.Log("ok");
-            if (LL.GetValue(__instance) != null)
-            {
-                Debug.Log("Got lobby list!");
-                if ((LL.GetValue(__instance) as Array).Length == 0)
-                {
-                    __instance.serverListBlankText.text = "No available servers to join.\n\n\nBizzlemip wuz here :3";
-                }
-                else
-                {
-                    __instance.serverListBlankText.text = "";
-                }
-                LP.SetValue(__instance,0f);
-                for (int j = 0; j < (LL.GetValue(__instance) as Lobby[]).Length; j++)
-                {
-                    GameObject obj = UnityEngine.Object.Instantiate(__instance.LobbySlotPrefab, __instance.levelListContainer);
-                    obj.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, (float)LP.GetValue(__instance));
-                    LP.SetValue(__instance, (float)((float)LP.GetValue(__instance)) - 42f);
-                    LobbySlot componentInChildren = obj.GetComponentInChildren<LobbySlot>();
-                    componentInChildren.LobbyName.text = (LL.GetValue(__instance) as Lobby[])[j].GetData("name");
-                    string text = (LL.GetValue(__instance) as Lobby[])[j].GetData("MaxPlayers");
-                    int number;
-                    Debug.Log(text);
-                    if (!(int.TryParse(text, out number)))
-                    {
-                        number = 4;
-                    }
-                    number = Math.Min(Math.Max(number, 4), 20);
-                    componentInChildren.playerCount.text = $"{(LL.GetValue(__instance) as Lobby[])[j].MemberCount} / " + number.ToString();
-                    componentInChildren.lobbyId = (LL.GetValue(__instance) as Lobby[])[j].Id;
-                    componentInChildren.thisLobby = (LL.GetValue(__instance) as Lobby[])[j];
-                }
-            }
-            else
-            {
-                Debug.Log("Lobby list is null after request.");
-                __instance.serverListBlankText.text = "No available servers to join.\n\n\nBizzlemip wuz here :3";
-            }
-            return;
-        }
         [HarmonyPatch(typeof(SoundManager), "Awake")]
         [HarmonyPostfix]
         public static void SoundWake(ref SoundManager __instance)
@@ -217,9 +68,10 @@ namespace BiggerLobby.Patches
             for (int j = 4; j < Plugin.MaxPlayers; j++)
             {
                 __instance.playerVoiceMixers[j] = UnityEngine.Object.Instantiate(__instance.playerVoiceMixers[0]);
-                //__instance.playerVoiceMixers[j].
+
             }
         }
+        
         [HarmonyPatch(typeof(SoundManager), "Start")]
         [HarmonyPostfix]
         public static void ResizeSoundManagerLists(ref SoundManager __instance)
@@ -253,14 +105,71 @@ namespace BiggerLobby.Patches
         private static bool instantiating = false;
         private static int nextClientId = 0;
         private static PlayerControllerB referencePlayer;
+        [HarmonyPatch(typeof(EnemyAI),"EnableEnemyMesh")]
+        [HarmonyPrefix]
+        public static bool EnableEnemyMesh(EnemyAI __instance, bool enable, bool overrideDoNotSet = false)
+        {
+            int layer = ((!enable) ? 23 : 19);
+            for (int i = 0; i < __instance.skinnedMeshRenderers.Length; i++)
+            {
+                if (__instance.skinnedMeshRenderers[i] && (!__instance.skinnedMeshRenderers[i].CompareTag("DoNotSet") || overrideDoNotSet))
+                {
+                    __instance.skinnedMeshRenderers[i].gameObject.layer = layer;
+                }
+            }
+            for (int j = 0; j < __instance.meshRenderers.Length; j++)
+            {
+                if (__instance.meshRenderers[j] && (!__instance.meshRenderers[j].CompareTag("DoNotSet") || overrideDoNotSet))
+                {
+                    __instance.meshRenderers[j].gameObject.layer = layer;
+                }
+            }
+            return (false);
+        }
+        [HarmonyPatch(typeof(ShipTeleporter), "Awake")]
+        [HarmonyPrefix]
+        public static bool Awake2(ShipTeleporter __instance)
+        {
+            int[] playersBeingTeleported2 = new int[Plugin.MaxPlayers];
+            for (int i = 0; i < Plugin.MaxPlayers; i++)
+            {
+                playersBeingTeleported2[i] = -1;
+            }
+            typeof(ShipTeleporter).GetField("playersBeingTeleported", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(__instance, playersBeingTeleported2);
+            __instance.buttonTrigger.interactable = false;
+            typeof(ShipTeleporter).GetField("cooldownTime", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(__instance, __instance.cooldownAmount);
+            return false;
+        }
         [HarmonyPatch(typeof(StartOfRound), "Start")]
         [HarmonyPrefix]
-        public static void AddPlayers(ref StartOfRound __instance)
+        public static bool AddPlayers()
         {
-            startOfRound = __instance;
-            referencePlayer = __instance.allPlayerObjects[0].GetComponent<PlayerControllerB>();
-            var playerPrefab = __instance.playerPrefab;
-            var playerContainer = __instance.playersContainer.transform;
+            Debug.Log("Ran");
+            NetworkSceneManager __instance = NetworkManager.Singleton.SceneManager;
+            startOfRound = StartOfRound.Instance;
+            if (startOfRound.allPlayerObjects[Plugin.MaxPlayers - 1] != null)
+            {
+                return(true);
+            }
+            Debug.Log("Adding players");
+            referencePlayer = startOfRound.allPlayerObjects[0].GetComponent<PlayerControllerB>();
+            var playerPrefab = startOfRound.playerPrefab;
+            var playerContainer = startOfRound.playersContainer.transform;
+            FieldInfo GlobalObjectIdHash = (typeof(NetworkObject).GetField("GlobalObjectIdHash", BindingFlags.NonPublic | BindingFlags.Instance));
+            PropertyInfo NetworkObjectId = (typeof(NetworkObject).GetProperty("NetworkObjectId", BindingFlags.Public | BindingFlags.Instance));
+            FieldInfo ScenePlacedObjects = (typeof(NetworkSceneManager).GetField("ScenePlacedObjects", BindingFlags.NonPublic | BindingFlags.Instance));
+            FieldInfo[] OBJFields = (typeof(NetworkObject).GetFields(BindingFlags.NonPublic | BindingFlags.Instance));
+            FieldInfo NetManager = (typeof(NetworkSceneManager).GetField("NetworkManager", BindingFlags.NonPublic | BindingFlags.Instance));
+            FieldInfo NetManager2 = (typeof(NetworkObject).GetField("NetworkManagerOwner", BindingFlags.NonPublic | BindingFlags.Instance));
+            FieldInfo SceneObject = NetManager2;
+            foreach (FieldInfo Field in OBJFields)
+            {
+                if (Field.Name == "<IsSceneObject>k__BackingField")
+                {
+                    SceneObject = Field;
+                }
+            }
+            instantiating = true;
             var spawnMethod = typeof(NetworkSpawnManager).GetMethod(
                 "SpawnNetworkObjectLocally",
                 BindingFlags.Instance | BindingFlags.NonPublic,
@@ -269,27 +178,52 @@ namespace BiggerLobby.Patches
                 new Type[] { typeof(NetworkObject), typeof(ulong), typeof(bool), typeof(bool), typeof(ulong), typeof(bool) },
                 null
             );
-                instantiating = true;
             for (int i = 4; i < Plugin.MaxPlayers; i++)
             {
                 nextClientId = i;
                 var newPlayer = GameObject.Instantiate<GameObject>(playerPrefab, playerContainer);
                 var newScript = newPlayer.GetComponent<PlayerControllerB>();
                 var netObject = newPlayer.GetComponent<NetworkObject>();
+                var plrphysbox = newPlayer.transform.Find("PlayerPhysicsBox").gameObject.GetComponent<NetworkObject>();
+                var itemholder = newPlayer.transform.Find("ScavengerModel/metarig/ScavengerModelArmsOnly/metarig/spine.003/shoulder.R/arm.R_upper/arm.R_lower/hand.R/LocalItemHolder").gameObject.GetComponent<NetworkObject>();
+                var itemholder2 = newPlayer.transform.Find("ScavengerModel/metarig/spine/spine.001/spine.002/spine.003/shoulder.R/arm.R_upper/arm.R_lower/hand.R/ServerItemHolder").gameObject.GetComponent<NetworkObject>();
                 newScript.TeleportPlayer(StartOfRound.Instance.notSpawnedPosition.position);
-                Debug.Log(netObject.OwnerClientId);
-                Debug.Log("[BiggerLobby] Trying to spawn new player");
-                __instance.allPlayerObjects[i] = newPlayer;
-                __instance.allPlayerScripts[i] = newScript;
-                (typeof(NetworkObject)).GetProperty("NetworkObjectId", BindingFlags.Instance | BindingFlags.Public).SetValue(netObject, (uint)1234567890ul + (ulong)i);
+                startOfRound.allPlayerObjects[i] = newPlayer;
+                startOfRound.allPlayerScripts[i] = newScript;
+                uint hash = 6942069u + (uint)i;
+                ulong hash2 = 6942069ul + (ulong)i;
+                uint hash3 = 123456789u + (uint)i;
+                uint hash4 = 987654321u + (uint)i;
+                uint hash5 = 124585949u + (uint)i;
+                ulong hash6 = 123456789ul + (ulong)i;
+                ulong hash7 = 987654321ul + (ulong)i;
+                ulong hash8 = 124585949ul + (ulong)i;
+                int handle = netObject.gameObject.scene.handle;
+                GlobalObjectIdHash.SetValue(netObject, hash);
+                GlobalObjectIdHash.SetValue(plrphysbox, hash3);
+                GlobalObjectIdHash.SetValue(itemholder, hash4);
+                GlobalObjectIdHash.SetValue(itemholder2, hash5);
+                NetworkObjectId.SetValue(netObject, hash2);
+                NetworkObjectId.SetValue(plrphysbox, hash6);
+                NetworkObjectId.SetValue(itemholder, hash7);
+                NetworkObjectId.SetValue(itemholder2, hash8);
                 spawnMethod.Invoke(NetworkManager.Singleton.SpawnManager, new object[]{
-                        netObject,
-                        1234567890ul + (ulong)i,
-                        true,//this needs to  be true or everything fucking shits itself. i think this might be the problem aswell. partciularly weird cuz apparently theres nested netobjs but i dont see any?
-                        true,
-                        netObject.OwnerClientId,
-                        false
-                    });
+                    netObject,
+                    hash2,
+                    true,//this needs to  be true or everything fucking shits itself. i think this might be the problem aswell. partciularly weird cuz apparently theres nested netobjs but i dont see any?
+                    true,
+                    netObject.OwnerClientId,
+                    false
+                });
+                SceneObject.SetValue(netObject, false);
+                NetManager2.SetValue(netObject, NetManager.GetValue(__instance));
+                SceneObject.SetValue(plrphysbox, false);
+                NetManager2.SetValue(plrphysbox, NetManager.GetValue(__instance));
+                SceneObject.SetValue(itemholder, false);
+                NetManager2.SetValue(itemholder, NetManager.GetValue(__instance));
+                SceneObject.SetValue(itemholder2, false);
+                NetManager2.SetValue(itemholder2, NetManager.GetValue(__instance));
+                
                 ManualCameraRenderer[] deezlist = UnityEngine.Object.FindObjectsByType<ManualCameraRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
                 for (int j = 0; j < deezlist.Length; j++)
                 {
@@ -298,34 +232,25 @@ namespace BiggerLobby.Patches
                 }
             }
             instantiating = false;
-        }
-        [HarmonyPatch(typeof(PlayerControllerB), "Update")]
-        [HarmonyPrefix]
-
-        public static bool ShitAssFix(ref PlayerControllerB __instance)
-        {
-            if (__instance.transform.parent.gameObject.name == "HangarShip" && !__instance.disconnectedMidGame && !__instance.isPlayerDead) {
-                __instance.isPlayerControlled = true;
-            }
             return (true);
         }
         [HarmonyPatch(typeof(QuickMenuManager), "Start")]
         [HarmonyPrefix]
 
-        public static bool Fuckyourplayerlist(ref QuickMenuManager __instance)
+        public static bool RemovePlayerlist(ref QuickMenuManager __instance)
         {
             __instance.playerListSlots = Helper.ResizeArray(__instance.playerListSlots, Plugin.MaxPlayers);
             for (int i = 4; i < Plugin.MaxPlayers; i++)
             {
-                PlayerListSlot TheBalls = new PlayerListSlot();
-                TheBalls.slotContainer = __instance.playerListSlots[0].slotContainer;
-                TheBalls.volumeSliderContainer = __instance.playerListSlots[0].volumeSliderContainer;
-                TheBalls.KickUserButton = __instance.playerListSlots[0].KickUserButton;
-                TheBalls.isConnected = false;
-                TheBalls.usernameHeader = __instance.playerListSlots[0].usernameHeader;
-                TheBalls.volumeSlider = __instance.playerListSlots[0].volumeSlider;
-                TheBalls.playerSteamId = __instance.playerListSlots[0].playerSteamId;
-                __instance.playerListSlots[i] = TheBalls;
+                PlayerListSlot NewSlot = new PlayerListSlot();
+                NewSlot.slotContainer = __instance.playerListSlots[0].slotContainer;
+                NewSlot.volumeSliderContainer = __instance.playerListSlots[0].volumeSliderContainer;
+                NewSlot.KickUserButton = __instance.playerListSlots[0].KickUserButton;
+                NewSlot.isConnected = false;
+                NewSlot.usernameHeader = __instance.playerListSlots[0].usernameHeader;
+                NewSlot.volumeSlider = __instance.playerListSlots[0].volumeSlider;
+                NewSlot.playerSteamId = __instance.playerListSlots[0].playerSteamId;
+                __instance.playerListSlots[i] = NewSlot;
             }
             __instance.playerListPanel.SetActive(false);
             return (true);

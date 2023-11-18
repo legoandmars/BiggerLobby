@@ -199,6 +199,22 @@ namespace BiggerLobby.Patches
             }
             return codes.AsEnumerable();
         }
+        [HarmonyPatch(typeof(StartOfRound), "OnClientConnect")]
+        [HarmonyTranspiler]
+        public static IEnumerable<CodeInstruction> OnClientConnect(IEnumerable<CodeInstruction> instructions)
+        {
+            var codes = new List<CodeInstruction>(instructions);
+            for (int i = 0; i < codes.Count; i++)
+            {
+                if (codes[i].opcode == OpCodes.Ldc_I4_4)
+                {
+                    codes[i].opcode = OpCodes.Ldc_I4_S;
+                    codes[i].operand = Plugin.MaxPlayers;
+                }
+            }
+            return codes.AsEnumerable();
+        }
+        
         [HarmonyPatch(typeof(HUDManager), "FillEndGameStats")]
         [HarmonyTranspiler]
         public static IEnumerable<CodeInstruction> FillEndGameStats(IEnumerable<CodeInstruction> instructions)
