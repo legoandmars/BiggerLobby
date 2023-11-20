@@ -140,7 +140,7 @@ namespace BiggerLobby.Patches
             typeof(ShipTeleporter).GetField("cooldownTime", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(__instance, __instance.cooldownAmount);
             return false;
         }
-        [HarmonyPatch(typeof(StartOfRound), "Start")]
+        [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnLoadComplete1")]
         [HarmonyPrefix]
         public static bool AddPlayers()
         {
@@ -157,11 +157,13 @@ namespace BiggerLobby.Patches
             var playerContainer = startOfRound.playersContainer.transform;
             FieldInfo GlobalObjectIdHash = (typeof(NetworkObject).GetField("GlobalObjectIdHash", BindingFlags.NonPublic | BindingFlags.Instance));
             PropertyInfo NetworkObjectId = (typeof(NetworkObject).GetProperty("NetworkObjectId", BindingFlags.Public | BindingFlags.Instance));
-            FieldInfo ScenePlacedObjects = (typeof(NetworkSceneManager).GetField("ScenePlacedObjects", BindingFlags.NonPublic | BindingFlags.Instance));
             FieldInfo[] OBJFields = (typeof(NetworkObject).GetFields(BindingFlags.NonPublic | BindingFlags.Instance));
             FieldInfo NetManager = (typeof(NetworkSceneManager).GetField("NetworkManager", BindingFlags.NonPublic | BindingFlags.Instance));
             FieldInfo NetManager2 = (typeof(NetworkObject).GetField("NetworkManagerOwner", BindingFlags.NonPublic | BindingFlags.Instance));
+            FieldInfo PrefabHandler = (typeof(NetworkManager).GetField("m_PrefabHandler", BindingFlags.NonPublic | BindingFlags.Instance));
+            NetworkPrefabHandler PrefabHandler2 = PrefabHandler.GetValue(NetworkManager.Singleton) as NetworkPrefabHandler;
             FieldInfo SceneObject = NetManager2;
+
             foreach (FieldInfo Field in OBJFields)
             {
                 if (Field.Name == "<IsSceneObject>k__BackingField")
@@ -180,6 +182,7 @@ namespace BiggerLobby.Patches
             );
             for (int i = 4; i < Plugin.MaxPlayers; i++)
             {
+                
                 nextClientId = i;
                 var newPlayer = GameObject.Instantiate<GameObject>(playerPrefab, playerContainer);
                 var newScript = newPlayer.GetComponent<PlayerControllerB>();
@@ -207,23 +210,26 @@ namespace BiggerLobby.Patches
                 NetworkObjectId.SetValue(plrphysbox, hash6);
                 NetworkObjectId.SetValue(itemholder, hash7);
                 NetworkObjectId.SetValue(itemholder2, hash8);
-                spawnMethod.Invoke(NetworkManager.Singleton.SpawnManager, new object[]{
+                SceneObject.SetValue(netObject, true);
+                NetManager2.SetValue(netObject, NetManager.GetValue(__instance));
+                SceneObject.SetValue(plrphysbox, true);
+                NetManager2.SetValue(plrphysbox, NetManager.GetValue(__instance));
+                SceneObject.SetValue(itemholder, true);
+                NetManager2.SetValue(itemholder, NetManager.GetValue(__instance));
+                SceneObject.SetValue(itemholder2, true);
+                NetManager2.SetValue(itemholder2, NetManager.GetValue(__instance));
+                Plugin.CustomNetObjects.Add(hash, netObject);
+                if (!netObject.IsSpawned) { 
+                /*spawnMethod.Invoke(NetworkManager.Singleton.SpawnManager, new object[]{
                     netObject,
                     hash2,
                     true,//this needs to  be true or everything fucking shits itself. i think this might be the problem aswell. partciularly weird cuz apparently theres nested netobjs but i dont see any?
                     true,
                     netObject.OwnerClientId,
                     false
-                });
-                SceneObject.SetValue(netObject, false);
-                NetManager2.SetValue(netObject, NetManager.GetValue(__instance));
-                SceneObject.SetValue(plrphysbox, false);
-                NetManager2.SetValue(plrphysbox, NetManager.GetValue(__instance));
-                SceneObject.SetValue(itemholder, false);
-                NetManager2.SetValue(itemholder, NetManager.GetValue(__instance));
-                SceneObject.SetValue(itemholder2, false);
-                NetManager2.SetValue(itemholder2, NetManager.GetValue(__instance));
-                
+                });*/
+                }
+
                 ManualCameraRenderer[] deezlist = UnityEngine.Object.FindObjectsByType<ManualCameraRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
                 for (int j = 0; j < deezlist.Length; j++)
                 {
