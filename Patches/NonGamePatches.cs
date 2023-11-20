@@ -1,4 +1,4 @@
-﻿using BepInEx;
+using BepInEx;
 using HarmonyLib;
 using Steamworks.Data;
 using Steamworks;
@@ -11,6 +11,7 @@ using UnityEngine;
 using System.Text.RegularExpressions;
 using TMPro;
 using System.Security.Cryptography;
+using LC_API;
 
 namespace BiggerLobby.Patches
 {
@@ -114,33 +115,32 @@ namespace BiggerLobby.Patches
         [HarmonyPrefix]
         public static bool DoTheThe()
         {
-
+            Plugin.CustomNetObjects.Clear();
             Plugin._harmony2.PatchAll(typeof(Patches.InternalPatch3));
             Plugin._harmony2.PatchAll(typeof(Patches.ListSizeTranspilers));
             Plugin._harmony2.PatchAll(typeof(Patches.PlayerObjects));
-            Debug.Log("she worble on my sneebler till i sneefenschnorf?");
             return (true);
         }
         [HarmonyPatch(typeof(GameNetworkManager), "StartClient")]
         [HarmonyPrefix]
         public static bool StartClient()
         {
+            Plugin.CustomNetObjects.Clear();
 
             Plugin._harmony2.PatchAll(typeof(Patches.InternalPatch3));
             Plugin._harmony2.PatchAll(typeof(Patches.ListSizeTranspilers));
             Plugin._harmony2.PatchAll(typeof(Patches.PlayerObjects));
-            Debug.Log("glimbo on a wheezer till i ghripehndorf?");
             return (true);
         }
         [HarmonyPatch(typeof(MenuManager), "StartAClient")]
         [HarmonyPrefix]
         public static bool StartAClient()
         {
-
+            Plugin.CustomNetObjects.Clear();
             Plugin._harmony2.PatchAll(typeof(Patches.InternalPatch3));
             Plugin._harmony2.PatchAll(typeof(Patches.ListSizeTranspilers));
             Plugin._harmony2.PatchAll(typeof(Patches.PlayerObjects));
-            Debug.Log("glimbo on a wheezer till i ghripehndorf?");
+            Debug.Log("LanRunningggg!");
             return (true);
         }
         [HarmonyPatch(typeof(SteamLobbyManager), "LoadServerList")]
@@ -278,6 +278,35 @@ namespace BiggerLobby.Patches
                 response.Pending = false;
                 return (false);
             } //etc
+        }
+        [HarmonyPatch(typeof(NetworkSceneManager))]
+        internal class InternalPatch4
+        {
+            static MethodInfo TargetMethod()
+            {
+                return typeof(NetworkSceneManager)
+                    .GetMethod("GetSceneRelativeInSceneNetworkObject",
+                               BindingFlags.NonPublic | BindingFlags.Instance);
+            }
+            [HarmonyPostfix]
+            static void prefix(uint globalObjectIdHash, int? networkSceneHandle, ref NetworkObject __result)//aeaee
+
+            {
+                Debug.Log("AEAEDAJSKFSZKJL!!!");
+                Debug.Log(globalObjectIdHash);
+                if (__result != null) {
+                    return;
+                }
+                if (globalObjectIdHash == 0)
+                {
+                    return;
+                }
+                if (Plugin.CustomNetObjects.ContainsKey(globalObjectIdHash))
+                {
+                    __result = Plugin.CustomNetObjects[globalObjectIdHash];
+                    return;
+                }
+            }
         }
         [HarmonyPatch(typeof(QuickMenuManager))]
         internal class InternalPatch2
