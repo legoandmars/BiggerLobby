@@ -1,4 +1,4 @@
-﻿using BepInEx;
+using BepInEx;
 using HarmonyLib;
 using System.Reflection;
 using LC_API;
@@ -22,12 +22,14 @@ namespace BiggerLobby
         //public static UnnamedStringMessageHandler MainCommunication;
         public static Harmony _harmony;
         public static Harmony _harmony2;
+        public static IDictionary<uint, NetworkObject> CustomNetObjects = new Dictionary<uint, NetworkObject> { };
         private void Awake()
         {
             _harmony = new Harmony(PluginInfo.PLUGIN_GUID);//todo: patch non menu changes only when lobby joined, then unpatch them after.
             _harmony2 = new Harmony(PluginInfo.PLUGIN_GUID + "A");
             _harmony.PatchAll(typeof(Patches.NonGamePatches));
             _harmony.PatchAll(typeof(Patches.NonGamePatches.InternalPatch2));
+            _harmony.PatchAll(typeof(Patches.NonGamePatches.InternalPatch4));
             _harmony.PatchAll(typeof(Patches.NonGamePatches.InternalPatches));
             Logger.LogInfo($"{PluginInfo.PLUGIN_GUID} loaded");
             LC_API.BundleAPI.BundleLoader.OnLoadedAssets += OnLoaded;
