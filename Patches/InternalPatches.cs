@@ -1,4 +1,4 @@
-﻿using BepInEx;
+using BepInEx;
 using GameNetcodeStuff;
 using HarmonyLib;
 using Steamworks.Data;
