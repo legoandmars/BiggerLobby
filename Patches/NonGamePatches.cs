@@ -1,4 +1,4 @@
-using BepInEx;
+﻿using BepInEx;
 using HarmonyLib;
 using Steamworks.Data;
 using Steamworks;
@@ -12,12 +12,128 @@ using System.Text.RegularExpressions;
 using TMPro;
 using System.Security.Cryptography;
 using LC_API;
+using System.Security.Permissions;
+using UnityEngine.SceneManagement;
+using System.Linq;
+using GameNetcodeStuff;
 
 namespace BiggerLobby.Patches
 {
     [HarmonyPatch]
     public class NonGamePatches
     {
+        [HarmonyPatch(typeof(StartOfRound), "UpdatePlayerVoiceEffects")]
+        [HarmonyPrefix]
+        public static void UpdatePlayerVoiceEffects(StartOfRound __instance)
+        {
+            if (GameNetworkManager.Instance == null || GameNetworkManager.Instance.localPlayerController == null)
+            {
+                return;
+            }
+            (typeof(StartOfRound)).GetField("updatePlayerVoiceInterval", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(__instance,2f);
+            PlayerControllerB playerControllerB = ((!GameNetworkManager.Instance.localPlayerController.isPlayerDead || !(GameNetworkManager.Instance.localPlayerController.spectatedPlayerScript != null)) ? GameNetworkManager.Instance.localPlayerController : GameNetworkManager.Instance.localPlayerController.spectatedPlayerScript);
+            for (int i = 0; i < __instance.allPlayerScripts.Length; i++)
+            {
+                PlayerControllerB playerControllerB2 = __instance.allPlayerScripts[i];
+                if ((!playerControllerB2.isPlayerControlled && !playerControllerB2.isPlayerDead) || playerControllerB2 == GameNetworkManager.Instance.localPlayerController)
+                {
+                    continue;
+                }
+                if (playerControllerB2.voicePlayerState == null || playerControllerB2.currentVoiceChatIngameSettings._playerState == null || playerControllerB2.currentVoiceChatAudioSource == null)
+                {
+                    __instance.RefreshPlayerVoicePlaybackObjects();
+                    if (playerControllerB2.voicePlayerState == null || playerControllerB2.currentVoiceChatAudioSource == null)
+                    {
+                        Debug.Log($"Was not able to access voice chat object for player #{i}; {playerControllerB2.voicePlayerState == null}; {playerControllerB2.currentVoiceChatAudioSource == null}");
+                        continue;
+                    }
+                }
+                AudioSource currentVoiceChatAudioSource = __instance.allPlayerScripts[i].currentVoiceChatAudioSource;
+                bool flag = playerControllerB2.speakingToWalkieTalkie && playerControllerB.holdingWalkieTalkie && playerControllerB2 != playerControllerB;
+                if (playerControllerB2.isPlayerDead)
+                {
+                    currentVoiceChatAudioSource.GetComponent<AudioLowPassFilter>().enabled = false;
+                    currentVoiceChatAudioSource.GetComponent<AudioHighPassFilter>().enabled = false;
+                    currentVoiceChatAudioSource.panStereo = 0f;
+                    SoundManager.Instance.playerVoicePitchTargets[playerControllerB2.playerClientId] = 1f;
+                    SoundManager.Instance.SetPlayerPitch(1f, (int)playerControllerB2.playerClientId);
+                    if (GameNetworkManager.Instance.localPlayerController.isPlayerDead)
+                    {
+                        currentVoiceChatAudioSource.spatialBlend = 0f;
+                        playerControllerB2.currentVoiceChatIngameSettings.set2D = true;
+                        if (playerControllerB2.voicePlayerState != null)
+                        {
+                            playerControllerB2.voicePlayerState.Volume = (SoundManager.Instance.playerVoiceVolumes[i] + 1) / 2;
+                        }
+                    }
+                    else
+                    {
+                        currentVoiceChatAudioSource.spatialBlend = 1f;
+                        playerControllerB2.currentVoiceChatIngameSettings.set2D = false;
+                        playerControllerB2.voicePlayerState.Volume = 0f;
+                    }
+                    continue;
+                }
+                AudioLowPassFilter component = currentVoiceChatAudioSource.GetComponent<AudioLowPassFilter>();
+                OccludeAudio component2 = currentVoiceChatAudioSource.GetComponent<OccludeAudio>();
+                component.enabled = true;
+                component2.overridingLowPass = flag || __instance.allPlayerScripts[i].voiceMuffledByEnemy;
+                currentVoiceChatAudioSource.GetComponent<AudioHighPassFilter>().enabled = flag;
+                if (!flag)
+                {
+                    currentVoiceChatAudioSource.spatialBlend = 1f;
+                    playerControllerB2.currentVoiceChatIngameSettings.set2D = false;
+                    currentVoiceChatAudioSource.bypassListenerEffects = false;
+                    currentVoiceChatAudioSource.bypassEffects = false;
+                    currentVoiceChatAudioSource.outputAudioMixerGroup = SoundManager.Instance.playerVoiceMixers[playerControllerB2.playerClientId];
+                    component.lowpassResonanceQ = 1f;
+                }
+                else
+                {
+                    currentVoiceChatAudioSource.spatialBlend = 0f;
+                    playerControllerB2.currentVoiceChatIngameSettings.set2D = true;
+                    if (GameNetworkManager.Instance.localPlayerController.isPlayerDead)
+                    {
+                        currentVoiceChatAudioSource.panStereo = 0f;
+                        currentVoiceChatAudioSource.outputAudioMixerGroup = SoundManager.Instance.playerVoiceMixers[playerControllerB2.playerClientId];
+                        currentVoiceChatAudioSource.bypassListenerEffects = false;
+                        currentVoiceChatAudioSource.bypassEffects = false;
+                    }
+                    else
+                    {
+                        currentVoiceChatAudioSource.panStereo = 0.4f;
+                        currentVoiceChatAudioSource.bypassListenerEffects = false;
+                        currentVoiceChatAudioSource.bypassEffects = false;
+                        currentVoiceChatAudioSource.outputAudioMixerGroup = SoundManager.Instance.playerVoiceMixers[playerControllerB2.playerClientId];
+                    }
+                    component2.lowPassOverride = 4000f;
+                    component.lowpassResonanceQ = 3f;
+                }
+                if (GameNetworkManager.Instance.localPlayerController.isPlayerDead)
+                {
+                    playerControllerB2.voicePlayerState.Volume = 0.8f;
+                }
+                else
+                {
+                    playerControllerB2.voicePlayerState.Volume = (SoundManager.Instance.playerVoiceVolumes[i] + 1) / 2;
+                }
+            }
+        }
+        [HarmonyPatch(typeof(StartOfRound), "Awake")]
+        [HarmonyPrefix]
+        public static void ResizeLists(ref StartOfRound __instance)
+        {
+            __instance.allPlayerObjects = Helper.ResizeArray(__instance.allPlayerObjects, Plugin.MaxPlayers);
+            __instance.allPlayerScripts = Helper.ResizeArray(__instance.allPlayerScripts, Plugin.MaxPlayers);
+            __instance.gameStats.allPlayerStats = Helper.ResizeArray(__instance.gameStats.allPlayerStats, Plugin.MaxPlayers);
+            __instance.playerSpawnPositions = Helper.ResizeArray(__instance.playerSpawnPositions, Plugin.MaxPlayers);
+            for (int j = 4; j < Plugin.MaxPlayers; j++)
+            {
+                __instance.gameStats.allPlayerStats[j] = new PlayerStats();
+                __instance.playerSpawnPositions[j] = __instance.playerSpawnPositions[0];
+            }
+        }
+        
         [HarmonyPatch(typeof(SoundManager), "SetPlayerVoiceFilters")]
         [HarmonyPrefix]
         public static bool SetPlayerVoiceFilters(ref SoundManager __instance)
@@ -29,6 +145,11 @@ namespace BiggerLobby.Patches
                     __instance.playerVoicePitches[j] = 1f;
                     __instance.playerVoiceVolumes[j] = 1f;
                     continue;
+                }
+                //Debug.Log(__instance.playerVoiceVolumes[j].ToString() + $"PlayerVolume{j}"); dont do this shit its annoying 
+                //__instance.diageticMixer.SetFloat($"PlayerVolume{j}", 16f * __instance.playerVoiceVolumes[j]);
+                if (StartOfRound.Instance.allPlayerScripts[j].voicePlayerState != null) { 
+                    StartOfRound.Instance.allPlayerScripts[j].voicePlayerState.Volume = (__instance.playerVoiceVolumes[j] + 1)/2;
                 }
                 if (Mathf.Abs(__instance.playerVoicePitches[j] - __instance.playerVoicePitchTargets[j]) > 0.025f)
                 {
@@ -100,25 +221,27 @@ namespace BiggerLobby.Patches
             int newnumber;
             if (!(int.TryParse(text, out newnumber)))
             {
-                newnumber = 20;
+                newnumber = 40;
             }
-            newnumber = Math.Min(Math.Max(newnumber, 4), 100);
+            newnumber = Math.Min(Math.Max(newnumber, 4), 40);
             Debug.Log(newnumber);
             Lobby lobby = GameNetworkManager.Instance.currentLobby ?? new Lobby();
             lobby.SetData("MaxPlayers", newnumber.ToString());
-            Plugin.MaxPlayers = newnumber;
             Debug.Log("SetMax");
             Debug.Log(newnumber);
             return (true);
+        }
+        [HarmonyPatch(typeof(HUDManager), "FillEndGameStats")]
+        [HarmonyPrefix]
+        public static bool FillEndGameStats()
+        {
+            return false;
         }
         [HarmonyPatch(typeof(GameNetworkManager),"StartHost")]
         [HarmonyPrefix]
         public static bool DoTheThe()
         {
             Plugin.CustomNetObjects.Clear();
-            Plugin._harmony2.PatchAll(typeof(Patches.InternalPatch3));
-            Plugin._harmony2.PatchAll(typeof(Patches.ListSizeTranspilers));
-            Plugin._harmony2.PatchAll(typeof(Patches.PlayerObjects));
             return (true);
         }
         [HarmonyPatch(typeof(GameNetworkManager), "StartClient")]
@@ -126,10 +249,6 @@ namespace BiggerLobby.Patches
         public static bool StartClient()
         {
             Plugin.CustomNetObjects.Clear();
-
-            Plugin._harmony2.PatchAll(typeof(Patches.InternalPatch3));
-            Plugin._harmony2.PatchAll(typeof(Patches.ListSizeTranspilers));
-            Plugin._harmony2.PatchAll(typeof(Patches.PlayerObjects));
             return (true);
         }
         [HarmonyPatch(typeof(MenuManager), "StartAClient")]
@@ -137,9 +256,6 @@ namespace BiggerLobby.Patches
         public static bool StartAClient()
         {
             Plugin.CustomNetObjects.Clear();
-            Plugin._harmony2.PatchAll(typeof(Patches.InternalPatch3));
-            Plugin._harmony2.PatchAll(typeof(Patches.ListSizeTranspilers));
-            Plugin._harmony2.PatchAll(typeof(Patches.PlayerObjects));
             Debug.Log("LanRunningggg!");
             return (true);
         }
@@ -196,7 +312,7 @@ namespace BiggerLobby.Patches
                     obj.GetComponent<RectTransform>().anchoredPosition = new UnityEngine.Vector2(0f, (float)LP.GetValue(__instance));
                     LP.SetValue(__instance, (float)((float)LP.GetValue(__instance)) - 42f);
                     LobbySlot componentInChildren = obj.GetComponentInChildren<LobbySlot>();
-                    componentInChildren.LobbyName.text = (LL.GetValue(__instance) as Lobby[])[j].GetData("name");
+                    componentInChildren.LobbyName.text = (LL.GetValue(__instance) as Lobby[])[j].GetData("name").Replace("[BiggerLobby]","[BL]");
                     string text = (LL.GetValue(__instance) as Lobby[])[j].GetData("MaxPlayers");
                     int number;
                     Debug.Log(text);
@@ -204,7 +320,7 @@ namespace BiggerLobby.Patches
                     {
                         number = 4;
                     }
-                    number = Math.Min(Math.Max(number, 4), 100);
+                    number = Math.Min(Math.Max(number, 4), 40);
                     componentInChildren.playerCount.text = $"{(LL.GetValue(__instance) as Lobby[])[j].MemberCount} / " + number.ToString();
                     componentInChildren.lobbyId = (LL.GetValue(__instance) as Lobby[])[j].Id;
                     componentInChildren.thisLobby = (LL.GetValue(__instance) as Lobby[])[j];
@@ -266,6 +382,11 @@ namespace BiggerLobby.Patches
                         response.Reason = "You cannot rejoin after being kicked.";
                         flag = false;
                     }
+                    else if (!(@string.Contains("she fortnite on my burger till i battlepass (she will regret writing this in the very near future!!!)")))
+                    {
+                        response.Reason = "You need to have <color=#008282>BiggerLobby V2.2.6</color> to join this server!";
+                        flag = false;
+                    }
                 }
                 else
                 {
@@ -279,56 +400,36 @@ namespace BiggerLobby.Patches
                 return (false);
             } //etc
         }
-        [HarmonyPatch(typeof(NetworkSceneManager))]
-        internal class InternalPatch4
+        [HarmonyPatch(typeof(GameNetworkManager))]
+        internal class InternalPatches2
         {
             static MethodInfo TargetMethod()
             {
-                return typeof(NetworkSceneManager)
-                    .GetMethod("GetSceneRelativeInSceneNetworkObject",
+                return typeof(GameNetworkManager)
+                    .GetMethod("SteamMatchmaking_OnLobbyCreated",
                                BindingFlags.NonPublic | BindingFlags.Instance);
             }
             [HarmonyPostfix]
-            static void prefix(uint globalObjectIdHash, int? networkSceneHandle, ref NetworkObject __result)//aeaee
-
+            static void PostFix(GameNetworkManager __instance, Result result, Lobby lobby)
             {
-                Debug.Log("AEAEDAJSKFSZKJL!!!");
-                Debug.Log(globalObjectIdHash);
-                if (__result != null) {
-                    return;
-                }
-                if (globalObjectIdHash == 0)
-                {
-                    return;
-                }
-                if (Plugin.CustomNetObjects.ContainsKey(globalObjectIdHash))
-                {
-                    __result = Plugin.CustomNetObjects[globalObjectIdHash];
-                    return;
-                }
-            }
-        }
-        [HarmonyPatch(typeof(QuickMenuManager))]
-        internal class InternalPatch2
-        {
-            static MethodInfo TargetMethod()
-            {
-                return typeof(QuickMenuManager)
-                    .GetMethod("NonHostPlayerSlotsEnabled",
-                               BindingFlags.NonPublic | BindingFlags.Instance);
-            }
-            [HarmonyPrefix]
-            static bool PostFix(ref bool __result)
-            {
-                __result = false;
-                return (false);
+                lobby.SetData("name", "[BiggerLobby]" + lobby.GetData("name"));
             } //etc
         }
-        [HarmonyPatch(typeof(Lobby), "Leave")]
-        [HarmonyPostfix]
-        public static void LeaveLobby()
+        [HarmonyPatch(typeof(GameNetworkManager), "SetConnectionDataBeforeConnecting")]
+        [HarmonyPrefix]
+        public static bool SetConnectionDataBeforeConnecting(GameNetworkManager __instance)
         {
-            Plugin._harmony2.UnpatchSelf();
+            __instance.localClientWaitingForApproval = true;
+            Debug.Log("Game version: " + __instance.gameVersionNum);
+            if (__instance.disableSteam)
+            {
+                NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(__instance.gameVersionNum.ToString() + "," + "she fortnite on my burger till i battlepass (she will regret writing this in the very near future!!!)");//this nonsense ass string exists to tell the server if youre running biggerlobby for some reason. Also she fortnite on my burger till I battle pass
+            }
+            else
+            {
+                NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(__instance.gameVersionNum + "," + (ulong)SteamClient.SteamId + "," + "she fortnite on my burger till i battlepass (she will regret writing this in the very near future!!!)");
+            }
+            return (false);
         }
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.LobbyDataIsJoinable))]
         [HarmonyPrefix]
@@ -336,16 +437,17 @@ namespace BiggerLobby.Patches
         {
             string data = lobby.GetData("vers");
             string text = lobby.GetData("MaxPlayers");
-            int number;
-            if (!text.IsNullOrWhiteSpace() || !(int.TryParse(text, out number)))
+            int newnumber;
+            if (!(int.TryParse(text, out newnumber)))
             {
-                number = 20;
+                newnumber = 20;
             }
-            number = Math.Min(Math.Max(number, 4), 100);
-            if (lobby.MemberCount >= number || lobby.MemberCount < 1)
+            newnumber = Math.Min(Math.Max(newnumber, 4), 40);
+            if (lobby.MemberCount >= newnumber || lobby.MemberCount < 1)
             {
                 Debug.Log($"Lobby join denied! Too many members in lobby! {lobby.Id}");
                 UnityEngine.Object.FindObjectOfType<MenuManager>().SetLoadingScreen(isLoading: false, RoomEnter.Full, "The server is full!");
+                __result = false;
                 return false;
             }
             if (data != __instance.gameVersionNum.ToString())
@@ -363,8 +465,9 @@ namespace BiggerLobby.Patches
                 return false;
             }
             Debug.Log("AEAELOGGINGNUMBER");
-            Debug.Log(number);
-            Plugin.MaxPlayers = number;
+            Debug.Log(newnumber);
+            Debug.Log(lobby.GetData("MaxPlayers"));
+            Debug.Log(newnumber);
             // Lobby member count check is skipped here, see original method
             __result = true;
             return false;

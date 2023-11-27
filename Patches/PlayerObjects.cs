@@ -22,6 +22,7 @@ using Dissonance.Integrations.Unity_NFGO;
 using Unity.Collections;
 using System.Runtime.CompilerServices;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace BiggerLobby.Patches
 {
@@ -53,6 +54,7 @@ namespace BiggerLobby.Patches
         [HarmonyPostfix]
         public static void ResizeLists2(ref HUDManager __instance)
         {
+            __instance.endgameStatsAnimator = UnityEngine.Object.Instantiate(__instance.endgameStatsAnimator);//lmao trolled
             __instance.playerLevels = Helper.ResizeArray(__instance.playerLevels, Plugin.MaxPlayers);
             for (int j = 4; j < Plugin.MaxPlayers; j++)
             {
@@ -65,9 +67,9 @@ namespace BiggerLobby.Patches
         public static void SoundWake(ref SoundManager __instance)
         {
             __instance.playerVoiceMixers = Helper.ResizeArray(__instance.playerVoiceMixers, Plugin.MaxPlayers);
-            for (int j = 4; j < Plugin.MaxPlayers; j++)
+            for (int j = 0; j < Plugin.MaxPlayers; j++)
             {
-                __instance.playerVoiceMixers[j] = UnityEngine.Object.Instantiate(__instance.playerVoiceMixers[0]);
+                __instance.playerVoiceMixers[j] = __instance.diageticMixer.outputAudioMixerGroup;
 
             }
         }
@@ -87,19 +89,6 @@ namespace BiggerLobby.Patches
                 __instance.playerVoicePitches[i] = 1f;
                 __instance.playerVoiceVolumes[i] = 1f;
             }
-        }
-        [HarmonyPatch(typeof(StartOfRound), "EndOfGame")]
-        [HarmonyPrefix]
-        public static void EOG(ref StartOfRound __instance, int bodiesInsured = 0, int connectedPlayersOnServer = 0)
-        {
-            Plugin.oldhastime = __instance.currentLevel.planetHasTime;
-            __instance.currentLevel.planetHasTime = false;
-        }
-        [HarmonyPatch(typeof(StartOfRound), "ReviveDeadPlayers")]
-        [HarmonyPrefix]
-        public static void RDP(ref StartOfRound __instance)
-        {
-            __instance.currentLevel.planetHasTime = Plugin.oldhastime;
         }
         private static StartOfRound startOfRound;
         private static bool instantiating = false;
@@ -140,37 +129,21 @@ namespace BiggerLobby.Patches
             typeof(ShipTeleporter).GetField("cooldownTime", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(__instance, __instance.cooldownAmount);
             return false;
         }
-        [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnLoadComplete1")]
+        [HarmonyPatch(typeof(NetworkSceneManager), "PopulateScenePlacedObjects")]
         [HarmonyPrefix]
-        public static bool AddPlayers()
+        public static bool AddPlayers(NetworkSceneManager __instance)
         {
-            Debug.Log("Ran");
-            NetworkSceneManager __instance = NetworkManager.Singleton.SceneManager;
             startOfRound = StartOfRound.Instance;
             if (startOfRound.allPlayerObjects[Plugin.MaxPlayers - 1] != null)
             {
                 return(true);
             }
-            Debug.Log("Adding players");
             referencePlayer = startOfRound.allPlayerObjects[0].GetComponent<PlayerControllerB>();
             var playerPrefab = startOfRound.playerPrefab;
             var playerContainer = startOfRound.playersContainer.transform;
             FieldInfo GlobalObjectIdHash = (typeof(NetworkObject).GetField("GlobalObjectIdHash", BindingFlags.NonPublic | BindingFlags.Instance));
             PropertyInfo NetworkObjectId = (typeof(NetworkObject).GetProperty("NetworkObjectId", BindingFlags.Public | BindingFlags.Instance));
-            FieldInfo[] OBJFields = (typeof(NetworkObject).GetFields(BindingFlags.NonPublic | BindingFlags.Instance));
-            FieldInfo NetManager = (typeof(NetworkSceneManager).GetField("NetworkManager", BindingFlags.NonPublic | BindingFlags.Instance));
-            FieldInfo NetManager2 = (typeof(NetworkObject).GetField("NetworkManagerOwner", BindingFlags.NonPublic | BindingFlags.Instance));
-            FieldInfo PrefabHandler = (typeof(NetworkManager).GetField("m_PrefabHandler", BindingFlags.NonPublic | BindingFlags.Instance));
-            NetworkPrefabHandler PrefabHandler2 = PrefabHandler.GetValue(NetworkManager.Singleton) as NetworkPrefabHandler;
-            FieldInfo SceneObject = NetManager2;
-
-            foreach (FieldInfo Field in OBJFields)
-            {
-                if (Field.Name == "<IsSceneObject>k__BackingField")
-                {
-                    SceneObject = Field;
-                }
-            }
+            FieldInfo SceneObjs = (typeof(NetworkSceneManager).GetField("ScenePlacedObjects", BindingFlags.NonPublic | BindingFlags.Instance));
             instantiating = true;
             var spawnMethod = typeof(NetworkSpawnManager).GetMethod(
                 "SpawnNetworkObjectLocally",
@@ -203,33 +176,13 @@ namespace BiggerLobby.Patches
                 ulong hash8 = 124585949ul + (ulong)i;
                 int handle = netObject.gameObject.scene.handle;
                 GlobalObjectIdHash.SetValue(netObject, hash);
-                GlobalObjectIdHash.SetValue(plrphysbox, hash3);
-                GlobalObjectIdHash.SetValue(itemholder, hash4);
-                GlobalObjectIdHash.SetValue(itemholder2, hash5);
                 NetworkObjectId.SetValue(netObject, hash2);
+                GlobalObjectIdHash.SetValue(plrphysbox, hash3);
                 NetworkObjectId.SetValue(plrphysbox, hash6);
+                GlobalObjectIdHash.SetValue(itemholder, hash4);
                 NetworkObjectId.SetValue(itemholder, hash7);
+                GlobalObjectIdHash.SetValue(itemholder2, hash5);
                 NetworkObjectId.SetValue(itemholder2, hash8);
-                SceneObject.SetValue(netObject, true);
-                NetManager2.SetValue(netObject, NetManager.GetValue(__instance));
-                SceneObject.SetValue(plrphysbox, true);
-                NetManager2.SetValue(plrphysbox, NetManager.GetValue(__instance));
-                SceneObject.SetValue(itemholder, true);
-                NetManager2.SetValue(itemholder, NetManager.GetValue(__instance));
-                SceneObject.SetValue(itemholder2, true);
-                NetManager2.SetValue(itemholder2, NetManager.GetValue(__instance));
-                Plugin.CustomNetObjects.Add(hash, netObject);
-                if (!netObject.IsSpawned) { 
-                /*spawnMethod.Invoke(NetworkManager.Singleton.SpawnManager, new object[]{
-                    netObject,
-                    hash2,
-                    true,//this needs to  be true or everything fucking shits itself. i think this might be the problem aswell. partciularly weird cuz apparently theres nested netobjs but i dont see any?
-                    true,
-                    netObject.OwnerClientId,
-                    false
-                });*/
-                }
-
                 ManualCameraRenderer[] deezlist = UnityEngine.Object.FindObjectsByType<ManualCameraRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
                 for (int j = 0; j < deezlist.Length; j++)
                 {
@@ -240,25 +193,134 @@ namespace BiggerLobby.Patches
             instantiating = false;
             return (true);
         }
+        [HarmonyPatch(typeof(QuickMenuManager), "AddUserToPlayerList")]
+        [HarmonyPrefix]
+        public static bool AddUserToPlayerList(QuickMenuManager __instance, ulong steamId, string playerName, int playerObjectId)
+        {
+            if (playerObjectId >= 0 && playerObjectId <= Plugin.MaxPlayers)
+            {
+                __instance.playerListSlots[playerObjectId].KickUserButton.SetActive(StartOfRound.Instance.IsServer);
+                __instance.playerListSlots[playerObjectId].slotContainer.SetActive(value: true);
+                __instance.playerListSlots[playerObjectId].isConnected = true;
+                __instance.playerListSlots[playerObjectId].playerSteamId = steamId;
+                __instance.playerListSlots[playerObjectId].usernameHeader.text = playerName.Replace("bizzlemip", "<color=#008282>bizzlemip</color>"); ;
+                if (GameNetworkManager.Instance.localPlayerController != null)
+                {
+                    __instance.playerListSlots[playerObjectId].volumeSliderContainer.SetActive(playerObjectId != (int)GameNetworkManager.Instance.localPlayerController.playerClientId);
+                }
+            }
+            return (false);
+        }
+        [HarmonyPatch(typeof(QuickMenuManager), "Update")]
+        [HarmonyPrefix]
+        private static bool Update(QuickMenuManager __instance)
+        {
+            for (int i = 0; i < __instance.playerListSlots.Length; i++)
+            {
+                if (__instance.playerListSlots[i].isConnected)
+                {
+                    float num = __instance.playerListSlots[i].volumeSlider.value / __instance.playerListSlots[i].volumeSlider.maxValue;
+                    if (num == -1f)
+                    {
+                        SoundManager.Instance.playerVoiceVolumes[i] = -1f;//-70f;//dude what the fuck? why? dont do that (joke)
+                    }
+                    else
+                    {
+                        SoundManager.Instance.playerVoiceVolumes[i] = num;
+                    }
+                }
+            }
+            return (false); 
+        }
         [HarmonyPatch(typeof(QuickMenuManager), "Start")]
         [HarmonyPrefix]
 
-        public static bool RemovePlayerlist(ref QuickMenuManager __instance)
+        public static bool FixPlayerList(ref QuickMenuManager __instance)
         {
-            __instance.playerListSlots = Helper.ResizeArray(__instance.playerListSlots, Plugin.MaxPlayers);
-            for (int i = 4; i < Plugin.MaxPlayers; i++)
+            GameObject OldMask = null;
+            GameObject ogparent = __instance.playerListPanel.transform.Find("Image").gameObject;
+            if (ogparent.transform.Find("Mask"))
             {
-                PlayerListSlot NewSlot = new PlayerListSlot();
-                NewSlot.slotContainer = __instance.playerListSlots[0].slotContainer;
-                NewSlot.volumeSliderContainer = __instance.playerListSlots[0].volumeSliderContainer;
-                NewSlot.KickUserButton = __instance.playerListSlots[0].KickUserButton;
-                NewSlot.isConnected = false;
-                NewSlot.usernameHeader = __instance.playerListSlots[0].usernameHeader;
-                NewSlot.volumeSlider = __instance.playerListSlots[0].volumeSlider;
-                NewSlot.playerSteamId = __instance.playerListSlots[0].playerSteamId;
-                __instance.playerListSlots[i] = NewSlot;
+                OldMask = ogparent.transform.Find("Mask").gameObject;
             }
-            __instance.playerListPanel.SetActive(false);
+            GameObject Mask = new GameObject("Mask");
+            GameObject newFrame = new GameObject("ScrollViewport");
+            GameObject bgCollision = new GameObject("BGCollision");
+            GameObject newFrame2 = new GameObject("ScrollContent");
+            Mask.transform.SetParent(ogparent.transform);
+            newFrame.transform.SetParent(Mask.transform);
+            bgCollision.transform.SetParent(newFrame.transform);
+            newFrame2.transform.SetParent(newFrame.transform);
+            Mask.transform.localScale = UnityEngine.Vector3.one;
+            newFrame.transform.localScale = UnityEngine.Vector3.one;
+            newFrame2.transform.localScale = UnityEngine.Vector3.one;
+            Mask.AddComponent<RectTransform>().sizeDelta = new UnityEngine.Vector2(300, 280f);
+            Mask.transform.localPosition = new UnityEngine.Vector3(-10, 110, 0);
+            newFrame.transform.localPosition = new UnityEngine.Vector3(0, -10, 0);
+            newFrame2.AddComponent<RectTransform>().pivot = new UnityEngine.Vector2(0.5f, 1);
+            Mask.GetComponent<RectTransform>().pivot = new UnityEngine.Vector2(0.5f, 1);
+            Mask.transform.localPosition = new UnityEngine.Vector3(-10, 110, 0);
+            Mask.AddComponent<RectMask2D>();
+            VerticalLayoutGroup VLG = newFrame2.AddComponent<VerticalLayoutGroup>();
+            ContentSizeFitter CSF = newFrame2.AddComponent<ContentSizeFitter>();
+            ScrollRect SR = newFrame.AddComponent<ScrollRect>();
+            SR.viewport = newFrame.AddComponent<RectTransform>();
+            SR.content = newFrame2.GetComponent<RectTransform>();
+            SR.horizontal = false;
+            UnityEngine.UI.Image image = bgCollision.AddComponent<UnityEngine.UI.Image>();
+            bgCollision.GetComponent<RectTransform>().anchorMin = new UnityEngine.Vector2(0, 0);
+            bgCollision.GetComponent<RectTransform>().anchorMax = new UnityEngine.Vector2(1, 1);
+            image.color = new UnityEngine.Color(255, 255, 255, 0);
+            VLG.spacing = 50;
+            CSF.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            CSF.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            __instance.playerListSlots = Helper.ResizeArray(__instance.playerListSlots, Plugin.MaxPlayers);
+            for (int i = 0; i < Plugin.MaxPlayers; i++)
+            {
+                if (i < 4)
+                {
+                    __instance.playerListSlots[i].slotContainer.transform.SetParent(newFrame2.transform);
+                }
+                else
+                {
+                    PlayerListSlot NewSlot = new PlayerListSlot();
+                    GameObject NewSlot2 = UnityEngine.Object.Instantiate(__instance.playerListSlots[0].slotContainer);
+                    NewSlot.slotContainer = NewSlot2;
+                    NewSlot.volumeSliderContainer = NewSlot2.transform.Find("VoiceVolumeSlider").gameObject;
+                    NewSlot.KickUserButton = NewSlot2.transform.Find("KickButton").gameObject;
+                    QuickMenuManager yeahoriginal = __instance;
+                    int localI = i;
+                    NewSlot.KickUserButton.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(() => {
+                        yeahoriginal.KickUserFromServer(localI);
+                    });
+                    NewSlot.isConnected = false;
+                    NewSlot.usernameHeader = NewSlot2.transform.Find("PlayerNameButton").Find("PName").gameObject.GetComponent<TextMeshProUGUI>();
+                    NewSlot.volumeSlider = NewSlot2.transform.Find("VoiceVolumeSlider").Find("Slider").gameObject.GetComponent<UnityEngine.UI.Slider>();
+                    NewSlot.playerSteamId = __instance.playerListSlots[0].playerSteamId;
+                    NewSlot2.transform.SetParent(newFrame2.transform,false);
+                    __instance.playerListSlots[i] = NewSlot;
+                }
+                
+            }
+            if (OldMask != null){
+                GameObject.Destroy(OldMask);
+            }
+            return (true);
+        }
+
+        [HarmonyPatch(typeof(StartOfRound), "SyncShipUnlockablesClientRpc")]
+        [HarmonyPrefix]
+
+        public static bool SyncShipUnlockablesClientRpc(StartOfRound __instance, int[] playerSuitIDs, bool shipLightsOn, UnityEngine.Vector3[] placeableObjectPositions, UnityEngine.Vector3[] placeableObjectRotations, int[] placeableObjects, int[] storedItems, int[] scrapValues, int[] itemSaveData)
+        {
+            Debug.Log("AEAEAEAEEAEAE");
+            Debug.Log(playerSuitIDs.Length);
+            Debug.Log(__instance.allPlayerScripts.Length);
+            for (int l = 0; l < __instance.allPlayerScripts.Length; l++)
+            {
+                Debug.Log(playerSuitIDs[l]);
+            }
+            Debug.Log("OAKY!");
             return (true);
         }
         [HarmonyPatch(typeof(ManualCameraRenderer), "Awake")]
@@ -280,7 +342,7 @@ namespace BiggerLobby.Patches
 
         public static bool FixPlayerObject(ref PlayerControllerB __instance)
         {
-            if (!instantiating) return(true);
+            if (!instantiating) return (true);
             __instance.gameObject.name = $"ExtraPlayer{nextClientId}";
             __instance.playerClientId = (ulong)nextClientId;
             __instance.actualClientId = (ulong)nextClientId;

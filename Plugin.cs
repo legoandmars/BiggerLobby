@@ -1,4 +1,4 @@
-using BepInEx;
+﻿using BepInEx;
 using HarmonyLib;
 using System.Reflection;
 using LC_API;
@@ -16,7 +16,7 @@ namespace BiggerLobby
     public class Plugin : BaseUnityPlugin
     {
         public static bool oldhastime;
-        public static int MaxPlayers = 20;
+        public static int MaxPlayers = 40;
         public static bool instantiating;
         public static NetworkObject[] PlayerObjects = new NetworkObject[]{ };
         //public static UnnamedStringMessageHandler MainCommunication;
@@ -28,9 +28,12 @@ namespace BiggerLobby
             _harmony = new Harmony(PluginInfo.PLUGIN_GUID);//todo: patch non menu changes only when lobby joined, then unpatch them after.
             _harmony2 = new Harmony(PluginInfo.PLUGIN_GUID + "A");
             _harmony.PatchAll(typeof(Patches.NonGamePatches));
-            _harmony.PatchAll(typeof(Patches.NonGamePatches.InternalPatch2));
-            _harmony.PatchAll(typeof(Patches.NonGamePatches.InternalPatch4));
             _harmony.PatchAll(typeof(Patches.NonGamePatches.InternalPatches));
+            _harmony.PatchAll(typeof(Patches.NonGamePatches.InternalPatches2));
+            Plugin.CustomNetObjects.Clear();
+            Plugin._harmony2.PatchAll(typeof(Patches.InternalPatch3));
+            Plugin._harmony2.PatchAll(typeof(Patches.ListSizeTranspilers));
+            Plugin._harmony2.PatchAll(typeof(Patches.PlayerObjects));
             Logger.LogInfo($"{PluginInfo.PLUGIN_GUID} loaded");
             LC_API.BundleAPI.BundleLoader.OnLoadedAssets += OnLoaded;
         }
