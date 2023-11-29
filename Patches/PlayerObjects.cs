@@ -23,6 +23,7 @@ using Unity.Collections;
 using System.Runtime.CompilerServices;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Dissonance;
 
 namespace BiggerLobby.Patches
 {

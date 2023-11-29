@@ -9,6 +9,7 @@ using Unity.Netcode;
 using System.Collections.Generic;
 using UnityEngine.Audio;
 using Unity.Collections;
+using BepInEx.Configuration;
 
 namespace BiggerLobby 
 {
@@ -16,15 +17,19 @@ namespace BiggerLobby
     public class Plugin : BaseUnityPlugin
     {
         public static bool oldhastime;
-        public static int MaxPlayers = 40;
+        public static int MaxPlayers = 16;
         public static bool instantiating;
         public static NetworkObject[] PlayerObjects = new NetworkObject[]{ };
         //public static UnnamedStringMessageHandler MainCommunication;
         public static Harmony _harmony;
         public static Harmony _harmony2;
+        public static ConfigEntry<int>? _LoudnessMultiplier;
+
         public static IDictionary<uint, NetworkObject> CustomNetObjects = new Dictionary<uint, NetworkObject> { };
         private void Awake()
         {
+            _LoudnessMultiplier =
+            Config.Bind("General", "Player loudness", 1, "Default player loudness");
             _harmony = new Harmony(PluginInfo.PLUGIN_GUID);//todo: patch non menu changes only when lobby joined, then unpatch them after.
             _harmony2 = new Harmony(PluginInfo.PLUGIN_GUID + "A");
             _harmony.PatchAll(typeof(Patches.NonGamePatches));

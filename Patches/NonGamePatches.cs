@@ -16,6 +16,7 @@ using System.Security.Permissions;
 using UnityEngine.SceneManagement;
 using System.Linq;
 using GameNetcodeStuff;
+using System.Runtime.CompilerServices;
 
 namespace BiggerLobby.Patches
 {
@@ -61,16 +62,20 @@ namespace BiggerLobby.Patches
                     {
                         currentVoiceChatAudioSource.spatialBlend = 0f;
                         playerControllerB2.currentVoiceChatIngameSettings.set2D = true;
-                        if (playerControllerB2.voicePlayerState != null)
+                        if (playerControllerB2.currentVoiceChatIngameSettings != null && playerControllerB2.currentVoiceChatIngameSettings._playbackComponent != null)
                         {
-                            playerControllerB2.voicePlayerState.Volume = (SoundManager.Instance.playerVoiceVolumes[i] + 1) / 2;
+                           (typeof(Dissonance.Audio.Playback.VoicePlayback).GetProperty("Dissonance.Audio.Playback.IVoicePlaybackInternal.PlaybackVolume", BindingFlags.NonPublic | BindingFlags.Instance)).SetValue(playerControllerB2.currentVoiceChatIngameSettings._playbackComponent,(SoundManager.Instance.playerVoiceVolumes[i] + 1) * (2 * Plugin._LoudnessMultiplier.Value));
                         }
                     }
                     else
                     {
                         currentVoiceChatAudioSource.spatialBlend = 1f;
                         playerControllerB2.currentVoiceChatIngameSettings.set2D = false;
-                        playerControllerB2.voicePlayerState.Volume = 0f;
+                        //playerControllerB2.voicePlayerState.Volume = 0f;
+                        if (playerControllerB2.currentVoiceChatIngameSettings != null && playerControllerB2.currentVoiceChatIngameSettings._playbackComponent != null)
+                        {
+                            (typeof(Dissonance.Audio.Playback.VoicePlayback).GetProperty("PlaybackVolume", BindingFlags.NonPublic | BindingFlags.Instance)).SetValue(playerControllerB2.currentVoiceChatIngameSettings._playbackComponent, 0);
+                        }
                     }
                     continue;
                 }
@@ -109,14 +114,17 @@ namespace BiggerLobby.Patches
                     component2.lowPassOverride = 4000f;
                     component.lowpassResonanceQ = 3f;
                 }
-                if (GameNetworkManager.Instance.localPlayerController.isPlayerDead)
+                /*if (GameNetworkManager.Instance.localPlayerController.isPlayerDead)
                 {
                     playerControllerB2.voicePlayerState.Volume = 0.8f;
                 }
                 else
-                {
-                    playerControllerB2.voicePlayerState.Volume = (SoundManager.Instance.playerVoiceVolumes[i] + 1) / 2;
-                }
+                {*/
+                    if (playerControllerB2.currentVoiceChatIngameSettings != null && playerControllerB2.currentVoiceChatIngameSettings._playbackComponent != null)
+                    {
+                      (typeof(Dissonance.Audio.Playback.VoicePlayback).GetProperty("PlaybackVolume", BindingFlags.NonPublic | BindingFlags.Instance)).SetValue(playerControllerB2.currentVoiceChatIngameSettings._playbackComponent, (SoundManager.Instance.playerVoiceVolumes[i] + 1) * (2*Plugin._LoudnessMultiplier.Value));
+                    }
+                //}
             }
         }
         [HarmonyPatch(typeof(StartOfRound), "Awake")]
@@ -148,8 +156,8 @@ namespace BiggerLobby.Patches
                 }
                 //Debug.Log(__instance.playerVoiceVolumes[j].ToString() + $"PlayerVolume{j}"); dont do this shit its annoying 
                 //__instance.diageticMixer.SetFloat($"PlayerVolume{j}", 16f * __instance.playerVoiceVolumes[j]);
-                if (StartOfRound.Instance.allPlayerScripts[j].voicePlayerState != null) { 
-                    StartOfRound.Instance.allPlayerScripts[j].voicePlayerState.Volume = (__instance.playerVoiceVolumes[j] + 1)/2;
+                if (StartOfRound.Instance.allPlayerScripts[j].voicePlayerState != null) {
+                    (typeof(Dissonance.Audio.Playback.VoicePlayback).GetProperty("Dissonance.Audio.Playback.IVoicePlaybackInternal.PlaybackVolume", BindingFlags.NonPublic | BindingFlags.Instance)).SetValue(StartOfRound.Instance.allPlayerScripts[j].currentVoiceChatIngameSettings._playbackComponent, (SoundManager.Instance.playerVoiceVolumes[j] + 1) * (2 * Plugin._LoudnessMultiplier.Value));
                 }
                 if (Mathf.Abs(__instance.playerVoicePitches[j] - __instance.playerVoicePitchTargets[j]) > 0.025f)
                 {
@@ -199,8 +207,33 @@ namespace BiggerLobby.Patches
             rt9.anchoredPosition = new UnityEngine.Vector2(rt9.anchoredPosition.x, 21);
             rt9.name = "ServerPlayersField";
             rt9.GetComponent<TMP_InputField>().contentType = TMP_InputField.ContentType.IntegerNumber;
-            rt9.transform.Find("Text Area").Find("Placeholder").gameObject.GetComponent<TextMeshProUGUI>().text = "Max players...";
+            rt9.transform.Find("Text Area").Find("Placeholder").gameObject.GetComponent<TextMeshProUGUI>().text = "Max players (16)...";
             rt9.transform.parent = __instance.HostSettingsOptionsNormal.transform;
+            void OnChange()
+            {
+                string text = Regex.Replace(rt9.GetComponent<TMP_InputField>().text, "[^0-9]", "");
+                Debug.Log(text);
+                int newnumber;
+                if (!(int.TryParse(text, out newnumber)))
+                {
+                    newnumber = 16;
+                }
+                newnumber = Math.Min(Math.Max(newnumber, 4), 40);
+                Debug.Log(newnumber);
+                if (newnumber > 16)
+                {
+                    p2.GetComponent<TextMeshProUGUI>().text = "Notice: High max player counts\nmay cause lag.";
+                }
+                else
+                {
+                    if (p2.GetComponent<TextMeshProUGUI>().text == "Notice: High max player counts\nmay cause lag.")
+                    {
+                        p2.GetComponent<TextMeshProUGUI>().text = "yeah you should be good now lol";
+                    }
+                }
+
+            }
+            rt9.GetComponent<TMP_InputField>().onValueChanged.AddListener(delegate { OnChange();  });
         }
         [HarmonyPatch(typeof(MenuManager), "StartHosting")]
         [HarmonyPrefix]
@@ -221,12 +254,13 @@ namespace BiggerLobby.Patches
             int newnumber;
             if (!(int.TryParse(text, out newnumber)))
             {
-                newnumber = 40;
+                newnumber = 16;
             }
             newnumber = Math.Min(Math.Max(newnumber, 4), 40);
             Debug.Log(newnumber);
             Lobby lobby = GameNetworkManager.Instance.currentLobby ?? new Lobby();
             lobby.SetData("MaxPlayers", newnumber.ToString());
+            Plugin.MaxPlayers = newnumber;
             Debug.Log("SetMax");
             Debug.Log(newnumber);
             return (true);
@@ -382,9 +416,9 @@ namespace BiggerLobby.Patches
                         response.Reason = "You cannot rejoin after being kicked.";
                         flag = false;
                     }
-                    else if (!(@string.Contains("she fortnite on my burger till i battlepass (she will regret writing this in the very near future!!!)")))
+                    else if (!(@string.Contains("BiggerLobbyVersion2.2.7")))
                     {
-                        response.Reason = "You need to have <color=#008282>BiggerLobby V2.2.6</color> to join this server!";
+                        response.Reason = "You need to have <color=#008282>BiggerLobby V2.2.7</color> to join this server!";
                         flag = false;
                     }
                 }
@@ -423,11 +457,11 @@ namespace BiggerLobby.Patches
             Debug.Log("Game version: " + __instance.gameVersionNum);
             if (__instance.disableSteam)
             {
-                NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(__instance.gameVersionNum.ToString() + "," + "she fortnite on my burger till i battlepass (she will regret writing this in the very near future!!!)");//this nonsense ass string exists to tell the server if youre running biggerlobby for some reason. Also she fortnite on my burger till I battle pass
+                NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(__instance.gameVersionNum.ToString() + "," + "BiggerLobbyVersion2.2.7");//this nonsense ass string exists to tell the server if youre running biggerlobby for some reason. Also she fortnite on my burger till I battle pass
             }
             else
             {
-                NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(__instance.gameVersionNum + "," + (ulong)SteamClient.SteamId + "," + "she fortnite on my burger till i battlepass (she will regret writing this in the very near future!!!)");
+                NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(__instance.gameVersionNum + "," + (ulong)SteamClient.SteamId + "," + "BiggerLobbyVersion2.2.7");
             }
             return (false);
         }
@@ -440,7 +474,7 @@ namespace BiggerLobby.Patches
             int newnumber;
             if (!(int.TryParse(text, out newnumber)))
             {
-                newnumber = 20;
+                newnumber = 16;
             }
             newnumber = Math.Min(Math.Max(newnumber, 4), 40);
             if (lobby.MemberCount >= newnumber || lobby.MemberCount < 1)
@@ -468,6 +502,7 @@ namespace BiggerLobby.Patches
             Debug.Log(newnumber);
             Debug.Log(lobby.GetData("MaxPlayers"));
             Debug.Log(newnumber);
+            Plugin.MaxPlayers = newnumber;
             // Lobby member count check is skipped here, see original method
             __result = true;
             return false;
