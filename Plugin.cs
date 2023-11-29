@@ -24,6 +24,7 @@ namespace BiggerLobby
         public static Harmony _harmony;
         public static Harmony _harmony2;
         public static ConfigEntry<int>? _LoudnessMultiplier;
+        public static bool Initialized = false;
 
         public static IDictionary<uint, NetworkObject> CustomNetObjects = new Dictionary<uint, NetworkObject> { };
         private void Awake()
@@ -43,6 +44,25 @@ namespace BiggerLobby
             LC_API.BundleAPI.BundleLoader.OnLoadedAssets += OnLoaded;
         }
 
+        private void Start()
+        {
+            Initialize();
+        }
+
+        // Legacy behaviour for if BepInEx.cfg's "HideManagerGameObject" is set to false
+        private void OnDestroy()
+        {
+            Initialize();
+        }
+
+        private void Initialize()
+        {
+            if (!Initialized)
+            {
+                Initialized = true;
+                LC_API.ServerAPI.ModdedServer.SetServerModdedOnly();
+            }
+        }
 
         private void OnLoaded()
         {
@@ -52,10 +72,6 @@ namespace BiggerLobby
                 return;
             }
             
-        }
-        private void OnDestroy()
-        {
-            LC_API.ServerAPI.ModdedServer.SetServerModdedOnly();
         }
     }
 }
