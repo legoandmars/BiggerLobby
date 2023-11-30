@@ -73,5 +73,17 @@ namespace BiggerLobby
             }
             
         }
+
+        public static int GetPlayerCount()
+        {
+            // Debug.Log("GETTING MAX PLAyERS");
+            return MaxPlayers;
+        }
+
+        public static int GetPlayerCountMinusOne()
+        {
+            // Debug.Log("Getting max players -1");
+            return MaxPlayers - 1;
+        }
     }
 }

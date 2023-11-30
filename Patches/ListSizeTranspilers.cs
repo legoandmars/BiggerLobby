@@ -13,17 +13,25 @@ namespace BiggerLobby.Patches
     [HarmonyPatch]
     public class ListSizeTranspilers
     {
+        private static MethodInfo _playerCountMethod = AccessTools.Method(typeof(Plugin), "GetPlayerCount");
+        private static MethodInfo _playerCountMinusOneMethod = AccessTools.Method(typeof(Plugin), "GetPlayerCountMinusOne");
+        /*private static List<CodeInstruction> _playerCountInstructions = new List<CodeInstruction>()
+        {
+            new CodeInstruction(OpCodes.Call, _playerCountMethod)
+        };*/
+
         private static void CheckAndReplace(List<CodeInstruction> codes, int index)
         {
             if (codes[index].opcode == OpCodes.Ldc_I4_4)
             {
                 Debug.Log("ok gunna do it");
-                Debug.Log((typeof(Plugin).GetField("MaxPlayers")));
-                codes[index].opcode = OpCodes.Ldsfld;
-                codes[index].operand = (typeof(Plugin).GetField("MaxPlayers"));
+                // Debug.Log((typeof(Plugin).GetField("MaxPlayers")));
+                codes[index].opcode = OpCodes.Call;
+                codes[index].operand = _playerCountMethod;
                 Debug.Log("ok gunna did it");
             }
         }
+
         [HarmonyPatch(typeof(HUDManager), "SyncAllPlayerLevelsServerRpc")]
         [HarmonyPatch(typeof(DressGirlAI), "ChoosePlayerToHaunt")]
         [HarmonyPatch(typeof(CrawlerAI), "Start")]
@@ -91,8 +99,8 @@ namespace BiggerLobby.Patches
             {
                 if (codes[i].opcode == OpCodes.Ldc_I4_3)
                 {
-                    codes[i].opcode = OpCodes.Ldc_I4_S;
-                    codes[i].operand = 39;//lmfao
+                    codes[i].opcode = OpCodes.Call;
+                    codes[i].operand = _playerCountMinusOneMethod; //lmfao
                     Debug.Log("Kick Fix Applied");
                     break;
                 }
@@ -110,8 +118,8 @@ namespace BiggerLobby.Patches
             {
                 if (codes[i].opcode == OpCodes.Ldc_I4_4)
                 {
-                    codes[i].opcode = OpCodes.Ldc_I4_S;
-                    codes[i].operand = Plugin.MaxPlayers;
+                    codes[i].opcode = OpCodes.Call;
+                    codes[i].operand = _playerCountMethod;
                 }
             }
             return codes.AsEnumerable();

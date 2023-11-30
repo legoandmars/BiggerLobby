@@ -261,6 +261,7 @@ namespace BiggerLobby.Patches
             Debug.Log(newnumber);
             Lobby lobby = GameNetworkManager.Instance.currentLobby ?? new Lobby();
             lobby.SetData("MaxPlayers", newnumber.ToString());
+            Debug.Log("SETTING MAX PLAYERS===");
             Plugin.MaxPlayers = newnumber;
             Debug.Log("SetMax");
             Debug.Log(newnumber);
@@ -417,9 +418,9 @@ namespace BiggerLobby.Patches
                         response.Reason = "You cannot rejoin after being kicked.";
                         flag = false;
                     }
-                    else if (!(@string.Contains("BiggerLobbyVersion2.2.7")))
+                    else if (!(@string.Contains("BiggerLobbyVersion2.4.0")))
                     {
-                        response.Reason = "You need to have <color=#008282>BiggerLobby V2.2.7</color> to join this server!";
+                        response.Reason = "You need to have <color=#008282>BiggerLobby V2.4.0</color> to join this server!";
                         flag = false;
                     }
                 }
@@ -458,11 +459,11 @@ namespace BiggerLobby.Patches
             Debug.Log("Game version: " + __instance.gameVersionNum);
             if (__instance.disableSteam)
             {
-                NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(__instance.gameVersionNum.ToString() + "," + "BiggerLobbyVersion2.2.7");//this nonsense ass string exists to tell the server if youre running biggerlobby for some reason. Also she fortnite on my burger till I battle pass
+                NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(__instance.gameVersionNum.ToString() + "," + "BiggerLobbyVersion2.4.0");//this nonsense ass string exists to tell the server if youre running biggerlobby for some reason. Also she fortnite on my burger till I battle pass
             }
             else
             {
-                NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(__instance.gameVersionNum + "," + (ulong)SteamClient.SteamId + "," + "BiggerLobbyVersion2.2.7");
+                NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(__instance.gameVersionNum + "," + (ulong)SteamClient.SteamId + "," + "BiggerLobbyVersion2.4.0");
             }
             return (false);
         }
@@ -503,6 +504,7 @@ namespace BiggerLobby.Patches
             Debug.Log(newnumber);
             Debug.Log(lobby.GetData("MaxPlayers"));
             Debug.Log(newnumber);
+            Debug.Log("SETTING MAX PLAYERS===");
             Plugin.MaxPlayers = newnumber;
             // Lobby member count check is skipped here, see original method
             __result = true;

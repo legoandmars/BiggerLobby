@@ -314,14 +314,9 @@ namespace BiggerLobby.Patches
 
         public static bool SyncShipUnlockablesClientRpc(StartOfRound __instance, int[] playerSuitIDs, bool shipLightsOn, UnityEngine.Vector3[] placeableObjectPositions, UnityEngine.Vector3[] placeableObjectRotations, int[] placeableObjects, int[] storedItems, int[] scrapValues, int[] itemSaveData)
         {
-            /*Debug.Log("AEAEAEAEEAEAE");
-            Debug.Log(playerSuitIDs.Length);
+            Debug.Log("INITIAL ARRAY LENGTHS");
             Debug.Log(__instance.allPlayerScripts.Length);
-            for (int l = 0; l < __instance.allPlayerScripts.Length; l++)
-            {
-                Debug.Log(playerSuitIDs[l]);
-            }
-            Debug.Log("OAKY!");*/
+            Debug.Log(playerSuitIDs.Length);
             return true;
         }
 
