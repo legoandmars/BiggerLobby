@@ -23,6 +23,8 @@ namespace BiggerLobby.Patches
     [HarmonyPatch]
     public class NonGamePatches
     {
+        private static PropertyInfo _playbackVolumeProperty = typeof(Dissonance.Audio.Playback.VoicePlayback).GetInterface("IVoicePlaybackInternal").GetProperty("PlaybackVolume");
+
         [HarmonyPatch(typeof(StartOfRound), "UpdatePlayerVoiceEffects")]
         [HarmonyPrefix]
         public static void UpdatePlayerVoiceEffects(StartOfRound __instance)
@@ -64,7 +66,7 @@ namespace BiggerLobby.Patches
                         playerControllerB2.currentVoiceChatIngameSettings.set2D = true;
                         if (playerControllerB2.currentVoiceChatIngameSettings != null && playerControllerB2.currentVoiceChatIngameSettings._playbackComponent != null)
                         {
-                           (typeof(Dissonance.Audio.Playback.VoicePlayback).GetProperty("Dissonance.Audio.Playback.IVoicePlaybackInternal.PlaybackVolume", BindingFlags.NonPublic | BindingFlags.Instance)).SetValue(playerControllerB2.currentVoiceChatIngameSettings._playbackComponent,(SoundManager.Instance.playerVoiceVolumes[i] + 1) * (2 * Plugin._LoudnessMultiplier.Value));
+                            _playbackVolumeProperty.SetValue(playerControllerB2.currentVoiceChatIngameSettings._playbackComponent, (SoundManager.Instance.playerVoiceVolumes[i] + 1) * (2 * Plugin._LoudnessMultiplier.Value));
                         }
                     }
                     else
@@ -74,7 +76,7 @@ namespace BiggerLobby.Patches
                         //playerControllerB2.voicePlayerState.Volume = 0f;
                         if (playerControllerB2.currentVoiceChatIngameSettings != null && playerControllerB2.currentVoiceChatIngameSettings._playbackComponent != null)
                         {
-                            (typeof(Dissonance.Audio.Playback.VoicePlayback).GetProperty("PlaybackVolume", BindingFlags.NonPublic | BindingFlags.Instance)).SetValue(playerControllerB2.currentVoiceChatIngameSettings._playbackComponent, 0);
+                            _playbackVolumeProperty.SetValue(playerControllerB2.currentVoiceChatIngameSettings._playbackComponent, 0);
                         }
                     }
                     continue;
@@ -120,11 +122,10 @@ namespace BiggerLobby.Patches
                 }
                 else
                 {*/
-                    if (playerControllerB2.currentVoiceChatIngameSettings != null && playerControllerB2.currentVoiceChatIngameSettings._playbackComponent != null)
-                    {
-                      (typeof(Dissonance.Audio.Playback.VoicePlayback).GetProperty("PlaybackVolume", BindingFlags.NonPublic | BindingFlags.Instance)).SetValue(playerControllerB2.currentVoiceChatIngameSettings._playbackComponent, (SoundManager.Instance.playerVoiceVolumes[i] + 1) * (2*Plugin._LoudnessMultiplier.Value));
-                    }
-                //}
+                if (playerControllerB2.currentVoiceChatIngameSettings != null && playerControllerB2.currentVoiceChatIngameSettings._playbackComponent != null)
+                {
+                    _playbackVolumeProperty.SetValue(playerControllerB2.currentVoiceChatIngameSettings._playbackComponent, (SoundManager.Instance.playerVoiceVolumes[i] + 1) * (2 * Plugin._LoudnessMultiplier.Value));
+                }
             }
         }
         [HarmonyPatch(typeof(StartOfRound), "Awake")]
