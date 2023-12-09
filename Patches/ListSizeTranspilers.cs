@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,7 +33,7 @@ namespace BiggerLobby.Patches
             }
         }
 
-        [HarmonyPatch(typeof(HUDManager), "SyncAllPlayerLevelsServerRpc")]
+        [HarmonyPatch(typeof(HUDManager), "SyncAllPlayerLevelsServerRpc", new Type[0])]
         [HarmonyPatch(typeof(DressGirlAI), "ChoosePlayerToHaunt")]
         [HarmonyPatch(typeof(CrawlerAI), "Start")]
         [HarmonyTranspiler]
