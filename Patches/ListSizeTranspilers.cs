@@ -7,6 +7,7 @@ using HarmonyLib;
 using BepInEx;
 using UnityEngine;
 using System.Reflection;
+using System;
 
 namespace BiggerLobby.Patches
 {
@@ -32,7 +33,7 @@ namespace BiggerLobby.Patches
             }
         }
 
-        [HarmonyPatch(typeof(HUDManager), "SyncAllPlayerLevelsServerRpc")]
+        [HarmonyPatch(typeof(HUDManager), "SyncAllPlayerLevelsServerRpc", new Type[] { })] // SyncAllPlayerLevelsServerRpc(int, int) uses a list instead of an array[4]
         [HarmonyPatch(typeof(DressGirlAI), "ChoosePlayerToHaunt")]
         [HarmonyPatch(typeof(CrawlerAI), "Start")]
         [HarmonyTranspiler]
