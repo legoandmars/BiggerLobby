@@ -247,26 +247,20 @@ namespace BiggerLobby.Patches
                 return (true);
             }
             GameObject SPF = __instance.HostSettingsOptionsNormal.transform.Find("ServerPlayersField").gameObject;
-            Debug.Log(SPF);
             GameObject Input = SPF.transform.Find("Text Area").Find("Text").gameObject;
-            Debug.Log(Input);
             TextMeshProUGUI iTextMeshProUGUI = Input.GetComponent<TextMeshProUGUI>();
-            Debug.Log(iTextMeshProUGUI);
             string text = Regex.Replace(iTextMeshProUGUI.text, "[^0-9]", "");
-            Debug.Log(text);
             int newnumber;
             if (!(int.TryParse(text, out newnumber)))
             {
                 newnumber = 16;
             }
             newnumber = Math.Min(Math.Max(newnumber, 4), 40);
-            Debug.Log(newnumber);
             Lobby lobby = GameNetworkManager.Instance.currentLobby ?? new Lobby();
             lobby.SetData("MaxPlayers", newnumber.ToString());
-            Debug.Log("SETTING MAX PLAYERS===");
+            Debug.Log($"SETTING MAX PLAYERS TO {newnumber}!");
             Plugin.MaxPlayers = newnumber;
-            Debug.Log("SetMax");
-            Debug.Log(newnumber);
+            if (GameNetworkManager.Instance != null) GameNetworkManager.Instance.maxAllowedPlayers = Plugin.MaxPlayers;
             return (true);
         }
         [HarmonyPatch(typeof(HUDManager), "FillEndGameStats")]
@@ -284,7 +278,7 @@ namespace BiggerLobby.Patches
         }
         [HarmonyPatch(typeof(GameNetworkManager), "StartClient")]
         [HarmonyPrefix]
-        public static bool StartClient()
+        public static bool StartClient(GameNetworkManager __instance)
         {
             Plugin.CustomNetObjects.Clear();
             return (true);
@@ -383,9 +377,9 @@ namespace BiggerLobby.Patches
                         response.Reason = "You cannot rejoin after being kicked.";
                         flag = false;
                     }
-                    else if (!(@string.Contains("BiggerLobbyVersion2.4.0")))
+                    else if (!(@string.Contains("BiggerLobbyVersion2.5.0")))
                     {
-                        response.Reason = "You need to have <color=#008282>BiggerLobby V2.4.0</color> to join this server!";
+                        response.Reason = "You need to have <color=#008282>BiggerLobby V2.5.0</color> to join this server!";
                         flag = false;
                     }
                 }
@@ -424,14 +418,15 @@ namespace BiggerLobby.Patches
             Debug.Log("Game version: " + __instance.gameVersionNum);
             if (__instance.disableSteam)
             {
-                NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(__instance.gameVersionNum.ToString() + "," + "BiggerLobbyVersion2.4.0");//this nonsense ass string exists to tell the server if youre running biggerlobby for some reason. Also she fortnite on my burger till I battle pass
+                NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(__instance.gameVersionNum.ToString() + "," + "BiggerLobbyVersion2.5.0");//this nonsense ass string exists to tell the server if youre running biggerlobby for some reason. Also she fortnite on my burger till I battle pass
             }
             else
             {
-                NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(__instance.gameVersionNum + "," + (ulong)SteamClient.SteamId + "," + "BiggerLobbyVersion2.4.0");
+                NetworkManager.Singleton.NetworkConfig.ConnectionData = Encoding.ASCII.GetBytes(__instance.gameVersionNum + "," + (ulong)SteamClient.SteamId + "," + "BiggerLobbyVersion2.5.0");
             }
             return (false);
         }
+
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.LobbyDataIsJoinable))]
         [HarmonyPrefix]
         public static bool SkipLobbySizeCheck(ref GameNetworkManager __instance, ref bool __result, Lobby lobby)
@@ -465,12 +460,9 @@ namespace BiggerLobby.Patches
                 __result = false;
                 return false;
             }
-            Debug.Log("AEAELOGGINGNUMBER");
-            Debug.Log(newnumber);
-            Debug.Log(lobby.GetData("MaxPlayers"));
-            Debug.Log(newnumber);
-            Debug.Log("SETTING MAX PLAYERS===");
             Plugin.MaxPlayers = newnumber;
+            Debug.Log($"SETTING MAX PLAYERS TO {newnumber}!");
+            if (__instance != null) __instance.maxAllowedPlayers = Plugin.MaxPlayers;
             // Lobby member count check is skipped here, see original method
             __result = true;
             return false;
