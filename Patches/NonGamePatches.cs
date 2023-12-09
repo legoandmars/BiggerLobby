@@ -17,6 +17,7 @@ using UnityEngine.SceneManagement;
 using System.Linq;
 using GameNetcodeStuff;
 using System.Runtime.CompilerServices;
+using System.Collections;
 
 namespace BiggerLobby.Patches
 {
@@ -24,6 +25,7 @@ namespace BiggerLobby.Patches
     public class NonGamePatches
     {
         private static PropertyInfo _playbackVolumeProperty = typeof(Dissonance.Audio.Playback.VoicePlayback).GetInterface("IVoicePlaybackInternal").GetProperty("PlaybackVolume");
+        private static FieldInfo _lobbyListField = AccessTools.Field(typeof(SteamLobbyManager), "currentLobbyList");
 
         [HarmonyPatch(typeof(StartOfRound), "UpdatePlayerVoiceEffects")]
         [HarmonyPrefix]
@@ -295,79 +297,42 @@ namespace BiggerLobby.Patches
             Debug.Log("LanRunningggg!");
             return (true);
         }
-        [HarmonyPatch(typeof(SteamLobbyManager), "LoadServerList")]
-        [HarmonyPrefix]
-        public async static void LoadServerList(SteamLobbyManager __instance)
+        [HarmonyPatch(typeof(SteamLobbyManager), "loadLobbyListAndFilter")]
+        [HarmonyPostfix]
+        public static IEnumerator LoadLobbyListAndFilter(IEnumerator result, SteamLobbyManager __instance)
         {
-            if (GameNetworkManager.Instance.waitingForLobbyDataRefresh)
+            // Run original enumerator code
+            while (result.MoveNext())
+                yield return result.Current;
+
+            // Ideally this would happen as the enumerator executes but I just want to get something working RN
+            // inject into existing server list 
+            Debug.Log("Injecting BL playercounts into lobby list.");
+            LobbySlot[] lobbySlots = __instance.levelListContainer.GetComponentsInChildren<LobbySlot>(true);
+
+            foreach(var lobbySlot in lobbySlots)
             {
-                return;
-            }
-            Debug.Log(typeof(SteamLobbyManager).GetField("refreshServerListTimer", BindingFlags.NonPublic | BindingFlags.Instance));
-            typeof(SteamLobbyManager).GetField("refreshServerListTimer", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(__instance, 0f);
-            __instance.serverListBlankText.text = "Loading server list...";
-            FieldInfo LL = typeof(SteamLobbyManager).GetField("currentLobbyList", BindingFlags.NonPublic | BindingFlags.Instance);
-            FieldInfo LP = typeof(SteamLobbyManager).GetField("lobbySlotPositionOffset", BindingFlags.NonPublic | BindingFlags.Instance);
-            LL.SetValue(__instance, null);
-            LobbySlot[] array = UnityEngine.Object.FindObjectsOfType<LobbySlot>();
-            for (int i = 0; i < array.Length; i++)
-            {
-                UnityEngine.Object.Destroy(array[i].gameObject);
-            }
-            switch (__instance.sortByDistanceSetting)
-            {
-                case 0:
-                    SteamMatchmaking.LobbyList.FilterDistanceClose();
-                    break;
-                case 1:
-                    SteamMatchmaking.LobbyList.FilterDistanceFar();
-                    break;
-                case 2:
-                    SteamMatchmaking.LobbyList.FilterDistanceWorldwide();
-                    break;
-            }
-            GameNetworkManager.Instance.waitingForLobbyDataRefresh = true;
-            Lobby[] results = await SteamMatchmaking.LobbyList.WithSlotsAvailable(1).WithKeyValue("vers", GameNetworkManager.Instance.gameVersionNum.ToString()).RequestAsync();
-            Debug.Log(results);
-            LL.SetValue(__instance, results);
-            GameNetworkManager.Instance.waitingForLobbyDataRefresh = false;
-            if (LL.GetValue(__instance) != null)
-            {
-                if ((LL.GetValue(__instance) as Array).Length == 0)
+                try
                 {
-                    __instance.serverListBlankText.text = "No available servers to join.\n\n\nBizzlemip wuz here :3";
-                }
-                else
-                {
-                    __instance.serverListBlankText.text = "";
-                }
-                LP.SetValue(__instance, 0f);
-                for (int j = 0; j < (LL.GetValue(__instance) as Lobby[]).Length; j++)
-                {
-                    GameObject obj = UnityEngine.Object.Instantiate(__instance.LobbySlotPrefab, __instance.levelListContainer);
-                    obj.GetComponent<RectTransform>().anchoredPosition = new UnityEngine.Vector2(0f, (float)LP.GetValue(__instance));
-                    LP.SetValue(__instance, (float)((float)LP.GetValue(__instance)) - 42f);
-                    LobbySlot componentInChildren = obj.GetComponentInChildren<LobbySlot>();
-                    componentInChildren.LobbyName.text = (LL.GetValue(__instance) as Lobby[])[j].GetData("name").Replace("[BiggerLobby]","[BL]");
-                    string text = (LL.GetValue(__instance) as Lobby[])[j].GetData("MaxPlayers");
-                    int number;
-                    Debug.Log(text);
-                    if (!(int.TryParse(text, out number)))
+                    // TODO: replace with custom graphic or something neat
+                    // TODO: Make this not count towards the 40 character max. don't wanna fix rn
+                    lobbySlot.LobbyName.text = lobbySlot.LobbyName.text.Replace("[BiggerLobby]", "[BL]");
+                    string text = lobbySlot.thisLobby.GetData("MaxPlayers");
+                    int maxPlayers;
+                    if (!(int.TryParse(text, out maxPlayers)))
                     {
-                        number = 4;
+                        maxPlayers = 4;
                     }
-                    number = Math.Min(Math.Max(number, 4), 40);
-                    componentInChildren.playerCount.text = $"{(LL.GetValue(__instance) as Lobby[])[j].MemberCount} / " + number.ToString();
-                    componentInChildren.lobbyId = (LL.GetValue(__instance) as Lobby[])[j].Id;
-                    componentInChildren.thisLobby = (LL.GetValue(__instance) as Lobby[])[j];
+                    lobbySlot.playerCount.text = lobbySlot.playerCount.text.Replace("/ 4", $"/ {maxPlayers}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning("Exception while injecting BL lobby metadata:");
+                    Debug.LogWarning(ex);
                 }
             }
-            else
-            {
-                __instance.serverListBlankText.text = "No available servers to join.\n\n\nBizzlemip wuz here :3";
-            }
-            return;
         }
+
         [HarmonyPatch(typeof(SteamMatchmaking), nameof(SteamMatchmaking.CreateLobbyAsync))]
         [HarmonyPrefix]
         public static void SetMaxMembers(ref int maxMembers)
