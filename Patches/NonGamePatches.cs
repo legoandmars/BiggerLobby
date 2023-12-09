@@ -124,7 +124,7 @@ namespace BiggerLobby.Patches
                 {*/
                 if (playerControllerB2.currentVoiceChatIngameSettings != null && playerControllerB2.currentVoiceChatIngameSettings._playbackComponent != null)
                 {
-                    _playbackVolumeProperty.SetValue(playerControllerB2.currentVoiceChatIngameSettings._playbackComponent, Mathf.Clamp((SoundManager.Instance.playerVoiceVolumes[i] + 1) * (2 * Plugin._LoudnessMultiplier.Value)), 0f, 1f);
+                    _playbackVolumeProperty.SetValue(playerControllerB2.currentVoiceChatIngameSettings._playbackComponent, Mathf.Clamp((SoundManager.Instance.playerVoiceVolumes[i] + 1) * (2 * (Plugin._LoudnessMultiplier.Value )), 0f, 1f));
                 }
             }
         }
@@ -158,7 +158,7 @@ namespace BiggerLobby.Patches
                 //Debug.Log(__instance.playerVoiceVolumes[j].ToString() + $"PlayerVolume{j}"); dont do this shit its annoying 
                 //__instance.diageticMixer.SetFloat($"PlayerVolume{j}", 16f * __instance.playerVoiceVolumes[j]);
                 if (StartOfRound.Instance.allPlayerScripts[j].voicePlayerState != null) {
-                    (typeof(Dissonance.Audio.Playback.VoicePlayback).GetProperty("Dissonance.Audio.Playback.IVoicePlaybackInternal.PlaybackVolume", BindingFlags.NonPublic | BindingFlags.Instance)).SetValue(StartOfRound.Instance.allPlayerScripts[j].currentVoiceChatIngameSettings._playbackComponent, Mathf.Clamp((SoundManager.Instance.playerVoiceVolumes[j] + 1) * (2 * Plugin._LoudnessMultiplier.Value)), 0f, 1f);
+                    (typeof(Dissonance.Audio.Playback.VoicePlayback).GetProperty("Dissonance.Audio.Playback.IVoicePlaybackInternal.PlaybackVolume", BindingFlags.NonPublic | BindingFlags.Instance)).SetValue(StartOfRound.Instance.allPlayerScripts[j].currentVoiceChatIngameSettings._playbackComponent, Mathf.Clamp((SoundManager.Instance.playerVoiceVolumes[j] + 1) * (2 * Plugin._LoudnessMultiplier.Value), 0f, 1f));
                 }
                 if (Mathf.Abs(__instance.playerVoicePitches[j] - __instance.playerVoicePitchTargets[j]) > 0.025f)
                 {
