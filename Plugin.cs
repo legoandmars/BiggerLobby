@@ -41,7 +41,7 @@ namespace BiggerLobby
             Plugin._harmony2.PatchAll(typeof(Patches.ListSizeTranspilers));
             Plugin._harmony2.PatchAll(typeof(Patches.PlayerObjects));
             Logger.LogInfo($"{PluginInfo.PLUGIN_GUID} loaded");
-            LC_API.BundleAPI.BundleLoader.OnLoadedAssets += OnLoaded;
+            LC_API.BundleAPI.BundleLoader.OnLoadedBundles += OnLoaded;
         }
 
         private void Start()
