@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using UnityEngine.Audio;
 using Unity.Collections;
 using BepInEx.Configuration;
+using System.Linq;
 
 namespace BiggerLobby 
 {
@@ -84,6 +85,20 @@ namespace BiggerLobby
         {
             // Debug.Log("Getting max players -1");
             return MaxPlayers - 1;
+        }
+
+        public static PlayerControllerB[] GetRealPlayerScripts(StartOfRound startOfRound)
+        {
+            Debug.Log("REALP LAYERS???");
+            Debug.Log(startOfRound);
+            if (startOfRound == null || startOfRound.allPlayerScripts == null)
+            {
+                return new PlayerControllerB[0]; // ??
+            }
+            Debug.Log("Player length:");
+            Debug.Log(startOfRound.allPlayerScripts.Where(x => x.isPlayerDead || x.isPlayerControlled).ToArray().Length);
+            // should probably be replaced with something smarter so this method doesn't have to run like 5 times every EndOfGameStats
+            return startOfRound.allPlayerScripts.Where(x => x.isPlayerDead || x.isPlayerControlled).ToArray();
         }
     }
 }

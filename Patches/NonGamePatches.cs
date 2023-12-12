@@ -265,10 +265,18 @@ namespace BiggerLobby.Patches
         }
         [HarmonyPatch(typeof(HUDManager), "FillEndGameStats")]
         [HarmonyPrefix]
-        public static bool FillEndGameStats()
+        public static void FillEndGameStats(HUDManager __instance)
         {
-            return false;
+            Debug.Log("FILAN");
+
+            Debug.Log(__instance.playersManager.allPlayerScripts.Length);
+            Debug.Log(__instance.statsUIElements.playerNamesText.Length);
+            Debug.Log(__instance.statsUIElements.playerStates.Length);
+            Debug.Log(__instance.statsUIElements.playerNotesText.Length);
+
+            // (!playerControllerB2.isPlayerControlled && !playerControllerB2.isPlayerDead)
         }
+
         [HarmonyPatch(typeof(GameNetworkManager),"StartHost")]
         [HarmonyPrefix]
         public static bool DoTheThe()

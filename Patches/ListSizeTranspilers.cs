@@ -16,6 +16,7 @@ namespace BiggerLobby.Patches
     {
         private static MethodInfo _playerCountMethod = AccessTools.Method(typeof(Plugin), "GetPlayerCount");
         private static MethodInfo _playerCountMinusOneMethod = AccessTools.Method(typeof(Plugin), "GetPlayerCountMinusOne");
+        private static MethodInfo _realPlayerScriptsMethod = AccessTools.Method(typeof(Plugin), "GetRealPlayerScripts");
         /*private static List<CodeInstruction> _playerCountInstructions = new List<CodeInstruction>()
         {
             new CodeInstruction(OpCodes.Call, _playerCountMethod)
@@ -71,26 +72,6 @@ namespace BiggerLobby.Patches
             }
             return codes.AsEnumerable();
         }
-        [HarmonyPatch(typeof(StartOfRound), "EndOfGameClientRpc")]
-        [HarmonyTranspiler]
-        public static IEnumerable<CodeInstruction> EndOfGameClientRpc(IEnumerable<CodeInstruction> instructions)
-        {
-            var codes = new List<CodeInstruction>(instructions);
-            for (int i = 0; i < codes.Count; i++)
-            {
-                if (codes[i].opcode == OpCodes.Brfalse && codes[i - 1].opcode == OpCodes.Ldfld && codes[i - 2].opcode == OpCodes.Ldfld && codes[i - 3].opcode == OpCodes.Ldarg_0)
-                {
-                    Debug.Log(codes[i - 1].opcode);
-                    Debug.Log(codes[i - 2].opcode);
-                    Debug.Log(codes[i - 3].opcode);
-
-                    codes[i-1].opcode = OpCodes.Nop;
-                    codes[i-2].opcode = OpCodes.Nop;
-                    CheckAndReplace(codes, i - 3);
-                }
-            }
-            return codes.AsEnumerable();
-        }
         [HarmonyPatch(typeof(QuickMenuManager), "ConfirmKickUserFromServer")]
         [HarmonyTranspiler]
         public static IEnumerable<CodeInstruction> ConfirmKickUserFromServer(IEnumerable<CodeInstruction> instructions)
@@ -108,6 +89,29 @@ namespace BiggerLobby.Patches
             }
             return codes.AsEnumerable();
         }
+
+        [HarmonyPatch(typeof(HUDManager), "FillEndGameStats")]
+        [HarmonyTranspiler]
+        public static IEnumerable<CodeInstruction> FillEndGameStatsPatch(IEnumerable<CodeInstruction> instructions)
+        {
+            var codes = new List<CodeInstruction>(instructions);
+            for (int i = 0; i < codes.Count; i++)
+            {
+                if (codes[i].opcode == OpCodes.Ldfld && codes[i].operand is FieldInfo fieldInfo && fieldInfo.Name == "allPlayerScripts")
+                {
+                    // replace allPlayerScripts call with a devious custom method that will remove fake players
+                    codes[i].opcode = OpCodes.Call;
+                    codes[i].operand = _realPlayerScriptsMethod;
+                }
+            }
+
+            foreach(var code in codes)
+            {
+                Debug.Log(code);
+            }
+            return codes.Where(x => x.opcode != OpCodes.Nop).AsEnumerable();
+        }
+
         [HarmonyPatch(typeof(StartOfRound), "SyncShipUnlockablesServerRpc")]
         [HarmonyPatch(typeof(StartOfRound), "OnClientConnect")]
         [HarmonyPatch(typeof(PlayerControllerB), "SpectateNextPlayer")]
