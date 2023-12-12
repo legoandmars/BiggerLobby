@@ -56,6 +56,7 @@ namespace BiggerLobby.Patches
         public static void ResizeLists2(ref HUDManager __instance)
         {
             __instance.endgameStatsAnimator = UnityEngine.Object.Instantiate(__instance.endgameStatsAnimator);//lmao trolled
+            // NOTE: __instance.playerLevels.Length is 5 by default!
             __instance.playerLevels = Helper.ResizeArray(__instance.playerLevels, Plugin.MaxPlayers);
             for (int j = 4; j < Plugin.MaxPlayers; j++)
             {

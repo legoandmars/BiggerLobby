@@ -6,6 +6,10 @@ namespace BiggerLobby
     public static class Helper
     {
         public static T[] ResizeArray<T>(T[] oldArray, int newSize) {
+            if (oldArray.Length >= newSize)
+            {
+                return oldArray;
+            }
             var newArray = new T[newSize];
             oldArray.CopyTo(newArray, 0);
             return newArray;
