@@ -18,6 +18,7 @@ using System.Linq;
 using GameNetcodeStuff;
 using System.Runtime.CompilerServices;
 using System.Collections;
+using BiggerLobby.UI;
 
 namespace BiggerLobby.Patches
 {
@@ -144,7 +145,14 @@ namespace BiggerLobby.Patches
                 __instance.playerSpawnPositions[j] = __instance.playerSpawnPositions[0];
             }
         }
-        
+
+        [HarmonyPatch(typeof(HUDManager), "Awake")]
+        [HarmonyPrefix]
+        public static void ResizeHUD(ref HUDManager __instance)
+        {
+            var expandedStats = ExpandedStatsUI.GetFromAnimator(__instance.endgameStatsAnimator);
+        }
+
         [HarmonyPatch(typeof(SoundManager), "SetPlayerVoiceFilters")]
         [HarmonyPrefix]
         public static bool SetPlayerVoiceFilters(ref SoundManager __instance)

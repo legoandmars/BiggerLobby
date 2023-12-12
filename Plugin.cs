@@ -17,6 +17,7 @@ namespace BiggerLobby
     [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
     public class Plugin : BaseUnityPlugin
     {
+        public static Plugin Instance;
         public static bool oldhastime;
         public static int MaxPlayers = 16;
         public static bool instantiating;
@@ -30,6 +31,7 @@ namespace BiggerLobby
         public static IDictionary<uint, NetworkObject> CustomNetObjects = new Dictionary<uint, NetworkObject> { };
         private void Awake()
         {
+            Instance = this;
             _LoudnessMultiplier =
             Config.Bind("General", "Player loudness", 1, "Default player loudness");
             _harmony = new Harmony(PluginInfo.PLUGIN_GUID);//todo: patch non menu changes only when lobby joined, then unpatch them after.
