@@ -1,5 +1,6 @@
 ﻿using BiggerLobby.Models;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -12,23 +13,27 @@ namespace BiggerLobby.UI
     public class ExpandedStatsUI : MonoBehaviour
     {
         private bool _initialized = false;
-        private bool _debugStatsUI = true;
-        private StatsUIReferences? _statsUIReferences;
+        private bool _debugStatsUI = false;
+
+        private static StatsUIReferences? _statsUIReferences;
         private PlayerStatsList _fourPlayersList;
         private PlayerStatsList _eightPlayersList;
         private PlayerStatsList _moreThanEightPlayersList;
+        private List<GameObject> _moreThanEightPlayersPages = new();
 
         // TODO: convert this to one variable somewhere, it's also used in the UI capping max player count
         public int UpperPlayerLimit = 40;
 
         // TODO: reimpl end game UI "checking off" players one at a time
         // this is implemented in an animation and might be a bit annoying to recreate
+        // TODO: Add animation to page switch
         public float SecondsPanelVisible = 8.5f;
+
+        private Sprite FourPlayerStatBoxes;
+        private Sprite EightPlayerStatBoxes;
 
         private void Start()
         {
-            Debug.Log("Starting EXPANDED STATS UI!");
-
             if (_initialized) return;
             
             if (_debugStatsUI)
@@ -40,9 +45,10 @@ namespace BiggerLobby.UI
             SetupEightPlayerSlots();
             SetupMoreThanEightPlayersSlots();
 
-            transform.GetChild(1).GetComponent<Image>().sprite = _statsUIReferences.StatsBoxesThin;
-            _fourPlayersList.gameObject.SetActive(false);
-            _eightPlayersList.gameObject.SetActive(false);
+            EightPlayerStatBoxes = _statsUIReferences.StatsBoxesThin;
+            FourPlayerStatBoxes = transform.GetChild(1).GetComponent<Image>().sprite;
+
+            transform.GetChild(2).Find("AllDead").SetAsLastSibling();
             _initialized = true;
         }
 
@@ -87,6 +93,7 @@ namespace BiggerLobby.UI
             for (int i = 0; i < maxPageCount; i++)
             {
                 var page = CreateTransformAtParentOrigin($"Page{i}", _moreThanEightPlayersList.transform);
+                _moreThanEightPlayersPages.Add(page.gameObject);
                 var playerSlots = SetupEightPlayerPage(page);
                 _moreThanEightPlayersList.AddPlayerSlotTransforms(playerSlots);
 
@@ -144,6 +151,59 @@ namespace BiggerLobby.UI
             var bundle = AssetBundle.LoadFromFile(bundlePath);
             var asset = bundle.LoadAsset<GameObject>("assets/prefabs/statsuireferences.prefab");
             _statsUIReferences = asset.GetComponent<StatsUIReferences>();
+            bundle.Unload(false);
+        }
+
+        public PlayerStatsList GetStatsListFromPlayerCount(int playerCount)
+        {
+            _fourPlayersList.gameObject.SetActive(false);
+            _eightPlayersList.gameObject.SetActive(false);
+            _moreThanEightPlayersList.gameObject.SetActive(false);
+
+            PlayerStatsList playerStatsList = _fourPlayersList;
+            if (playerCount > 8) playerStatsList = _moreThanEightPlayersList;
+            else if (playerCount > 4) playerStatsList = _eightPlayersList;
+
+            SetupStatsList(playerStatsList, playerCount);
+            return playerStatsList;
+        }
+
+        private void SetupStatsList(PlayerStatsList playerStatsList, int playerCount)
+        {
+            playerStatsList.gameObject.SetActive(true);
+            transform.GetChild(1).GetComponent<Image>().sprite = playerCount <= 4 ? FourPlayerStatBoxes : EightPlayerStatBoxes;
+            if (playerCount > 8)
+            {
+                // need the fancy one!
+                StartCoroutine(PaginatePlayers(playerCount));
+            }
+
+            
+            // setup null players properly
+            for (int i = 0; i < playerStatsList.Names.Count; i++) 
+            {
+                playerStatsList.Names[i].text = "";
+                playerStatsList.Notes[i].text = "";
+                playerStatsList.States[i].enabled = false;
+            }
+        }
+
+        private IEnumerator PaginatePlayers(int playerCount)
+        {
+            int maxPageCount = (int)Math.Ceiling(playerCount / 8f);
+            float pageDuration = SecondsPanelVisible / (float)maxPageCount;
+
+            foreach (var page in _moreThanEightPlayersPages)
+            {
+                page.SetActive(false);
+            }
+
+            for (int i = 0; i < maxPageCount; i++)
+            {
+                _moreThanEightPlayersPages[i].SetActive(true);
+                if (i > 0) _moreThanEightPlayersPages[i - 1].SetActive(false);
+                yield return new WaitForSeconds(pageDuration);
+            }
         }
 
         public static ExpandedStatsUI GetFromAnimator(Animator endgameStatsAnimator)
@@ -155,9 +215,11 @@ namespace BiggerLobby.UI
             else
             {
                 var statsUI = endgameStatsAnimator.gameObject.AddComponent<ExpandedStatsUI>();
-                statsUI.LoadStatsUIBundle();
+                if (_statsUIReferences == null) statsUI.LoadStatsUIBundle();
                 return statsUI;
             }
         }
+
+        public static Sprite? GetReplacementCheckmark() => _statsUIReferences?.CheckmarkThin;
     }
 }

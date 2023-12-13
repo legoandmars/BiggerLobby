@@ -19,6 +19,7 @@ using GameNetcodeStuff;
 using System.Runtime.CompilerServices;
 using System.Collections;
 using BiggerLobby.UI;
+using BiggerLobby.Models;
 
 namespace BiggerLobby.Patches
 {
@@ -271,18 +272,47 @@ namespace BiggerLobby.Patches
             if (GameNetworkManager.Instance != null) GameNetworkManager.Instance.maxAllowedPlayers = Plugin.MaxPlayers;
             return (true);
         }
+
         [HarmonyPatch(typeof(HUDManager), "FillEndGameStats")]
         [HarmonyPrefix]
         public static void FillEndGameStats(HUDManager __instance)
         {
-            Debug.Log("FILAN");
+            // Modify the arrays to our liking
+            // This is probably unnecessary to run every time, and could just be initalized when the player count changes
+            var expandedStats = ExpandedStatsUI.GetFromAnimator(__instance.endgameStatsAnimator);
+            if (expandedStats == null || StartOfRound.Instance == null) return; // something has gone terribly wrong
+            var statsList = expandedStats.GetStatsListFromPlayerCount(Plugin.GetRealPlayerScripts(StartOfRound.Instance).Length);
 
-            Debug.Log(__instance.playersManager.allPlayerScripts.Length);
-            Debug.Log(__instance.statsUIElements.playerNamesText.Length);
-            Debug.Log(__instance.statsUIElements.playerStates.Length);
-            Debug.Log(__instance.statsUIElements.playerNotesText.Length);
+            __instance.statsUIElements.playerNamesText = statsList.Names.ToArray();
+            __instance.statsUIElements.playerStates = statsList.States.ToArray();
+            __instance.statsUIElements.playerNotesText = statsList.Notes.ToArray();
 
-            // (!playerControllerB2.isPlayerControlled && !playerControllerB2.isPlayerDead)
+            Debug.Log("Adding EXPANDED stats!");
+        }
+
+        [HarmonyPatch(typeof(HUDManager), "FillEndGameStats")]
+        [HarmonyPostfix]
+        public static void FillEndGameStatsPostfix(HUDManager __instance)
+        {
+            // Make notes smaller for 5+ players so we can fit everything on the screen
+            if (StartOfRound.Instance == null) return;
+            var playerCount = Plugin.GetRealPlayerScripts(StartOfRound.Instance).Length;
+            if (playerCount > 4)
+            {
+                foreach (var notesText in __instance.statsUIElements.playerNotesText)
+                {
+                    if (notesText.text == "") continue;
+                    notesText.text = notesText.text.Replace("Notes:", "").Trim();
+                }
+
+                var replacementCheckmark = ExpandedStatsUI.GetReplacementCheckmark();
+                if (replacementCheckmark == null) return;
+                foreach (var playerState in __instance.statsUIElements.playerStates)
+                {
+                    if (playerState.sprite != __instance.statsUIElements.aliveIcon) continue;
+                    playerState.sprite = replacementCheckmark;
+                }
+            }
         }
 
         [HarmonyPatch(typeof(GameNetworkManager),"StartHost")]
