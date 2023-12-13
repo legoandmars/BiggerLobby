@@ -14,8 +14,16 @@ namespace BiggerLobby.UI
         private bool _initialized = false;
         private bool _debugStatsUI = true;
         private StatsUIReferences? _statsUIReferences;
-        private Transform _fourPlayersList;
-        private Transform _eightPlayersList;
+        private PlayerStatsList _fourPlayersList;
+        private PlayerStatsList _eightPlayersList;
+        private PlayerStatsList _moreThanEightPlayersList;
+
+        // TODO: convert this to one variable somewhere, it's also used in the UI capping max player count
+        public int UpperPlayerLimit = 40;
+
+        // TODO: reimpl end game UI "checking off" players one at a time
+        // this is implemented in an animation and might be a bit annoying to recreate
+        public float SecondsPanelVisible = 8.5f;
 
         private void Start()
         {
@@ -30,9 +38,11 @@ namespace BiggerLobby.UI
 
             SetupFourPlayerSlots();
             SetupEightPlayerSlots();
+            SetupMoreThanEightPlayersSlots();
 
             transform.GetChild(1).GetComponent<Image>().sprite = _statsUIReferences.StatsBoxesThin;
             _fourPlayersList.gameObject.SetActive(false);
+            _eightPlayersList.gameObject.SetActive(false);
             _initialized = true;
         }
 
@@ -46,41 +56,59 @@ namespace BiggerLobby.UI
             transform.GetChild(2).Find("AllDead").gameObject.SetActive(false);
         }
 
+        // TODO: this breaks base game animation
         private void SetupFourPlayerSlots()
         {
-            _fourPlayersList = new GameObject("FourPlayersList").transform;
-            _fourPlayersList.SetParent(transform.GetChild(2));
-            _fourPlayersList.localPosition = Vector3.zero;
-            _fourPlayersList.localRotation = Quaternion.identity;
-            _fourPlayersList.localScale = Vector3.one;
-
+            _fourPlayersList = new(CreateTransformAtParentOrigin("FourPlayersList", transform.GetChild(2)));
             // move player slots
 
-            transform.GetChild(2).Find("PlayerSlot1").SetParent(_fourPlayersList);
-            transform.GetChild(2).Find("PlayerSlot2").SetParent(_fourPlayersList);
-            transform.GetChild(2).Find("PlayerSlot3").SetParent(_fourPlayersList);
-            transform.GetChild(2).Find("PlayerSlot4").SetParent(_fourPlayersList);
-
+            for (int i = 0; i < 4; i++)
+            {
+                var playerSlot = transform.GetChild(2).Find($"PlayerSlot{i + 1}");
+                playerSlot.SetParent(_fourPlayersList.transform);
+                _fourPlayersList.AddPlayerSlotTransform(playerSlot);
+            }
         }
 
         // only run after isolating 4 player slots in SetupFourPlayerSlots();
         private void SetupEightPlayerSlots()
         {
-            _eightPlayersList = new GameObject("EightPlayersList").transform;
-            _eightPlayersList.SetParent(transform.GetChild(2));
-            _eightPlayersList.localPosition = Vector3.zero;
-            _eightPlayersList.localRotation = Quaternion.identity;
-            _eightPlayersList.localScale = Vector3.one;
+            _eightPlayersList = new(CreateTransformAtParentOrigin("EightPlayersList", transform.GetChild(2)));
 
-            for(int i = 0; i < 8; i++)
+            var playerSlots = SetupEightPlayerPage(_eightPlayersList.transform);
+            _eightPlayersList.AddPlayerSlotTransforms(playerSlots);
+        }
+
+        private void SetupMoreThanEightPlayersSlots()
+        {
+            _moreThanEightPlayersList = new(CreateTransformAtParentOrigin("MoreThanEightPlayersList", transform.GetChild(2)));
+
+            int maxPageCount = (int)Math.Ceiling(UpperPlayerLimit / 8f);
+            for (int i = 0; i < maxPageCount; i++)
             {
-                var otherPlayer = Instantiate(_fourPlayersList.GetChild(0), _eightPlayersList, true);
-                SetupEightPlayerSlot(otherPlayer);
-                otherPlayer.localPosition = new Vector3(otherPlayer.localPosition.x, -26.1f * i, otherPlayer.localPosition.z);
+                var page = CreateTransformAtParentOrigin($"Page{i}", _moreThanEightPlayersList.transform);
+                var playerSlots = SetupEightPlayerPage(page);
+                _moreThanEightPlayersList.AddPlayerSlotTransforms(playerSlots);
+
+                if (i != 0) page.gameObject.SetActive(false);
             }
         }
 
-        private void SetupEightPlayerSlot(Transform playerSlot)
+        private List<Transform> SetupEightPlayerPage(Transform parent)
+        {
+            List<Transform> playerSlots = new();
+            for (int i = 0; i < 8; i++)
+            {
+                var otherPlayer = Instantiate(_fourPlayersList.transform.GetChild(0), parent, true);
+                SetupPlayerSlot(otherPlayer);
+                otherPlayer.localPosition = new Vector3(otherPlayer.localPosition.x, -26.1f * i, otherPlayer.localPosition.z);
+                playerSlots.Add(otherPlayer);
+            }
+
+            return playerSlots;
+        }
+
+        private void SetupPlayerSlot(Transform playerSlot)
         {
             var playerNotes = playerSlot.Find("Notes").GetComponent<TextMeshProUGUI>();
             var playerName = playerSlot.GetChild(0).GetComponent<TextMeshProUGUI>();
@@ -97,6 +125,17 @@ namespace BiggerLobby.UI
             playerSymbol.sprite = _statsUIReferences.CheckmarkThin;
             playerSymbolRect.sizeDelta = new Vector2(playerSymbolRect.sizeDelta.x, 31.235f);
             playerSymbolRect.localPosition = new Vector3(playerSymbolRect.localPosition.x, 101.5f, playerSymbolRect.localPosition.z);
+        }
+        
+        private Transform CreateTransformAtParentOrigin(string name, Transform parent)
+        {
+            var newTransform = new GameObject(name).transform;
+            newTransform.SetParent(parent);
+            newTransform.localPosition = Vector3.zero;
+            newTransform.localRotation = Quaternion.identity;
+            newTransform.localScale = Vector3.one;
+
+            return newTransform;
         }
 
         public void LoadStatsUIBundle()
