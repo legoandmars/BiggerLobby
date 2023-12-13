@@ -26,11 +26,8 @@ namespace BiggerLobby.Patches
         {
             if (codes[index].opcode == OpCodes.Ldc_I4_4)
             {
-                Debug.Log("ok gunna do it");
-                // Debug.Log((typeof(Plugin).GetField("MaxPlayers")));
                 codes[index].opcode = OpCodes.Call;
                 codes[index].operand = _playerCountMethod;
-                Debug.Log("ok gunna did it");
             }
         }
 
@@ -46,7 +43,6 @@ namespace BiggerLobby.Patches
             {
                 if (codes[i].opcode == OpCodes.Newarr)
                 {
-                    Debug.Log("newarr");
                     CheckAndReplace(codes, i - 1);
                 }
             }
@@ -66,7 +62,6 @@ namespace BiggerLobby.Patches
             {
                 if (codes[i].opcode == OpCodes.Blt)
                 {
-                    Debug.Log("blt");
                     CheckAndReplace(codes, i - 1);
                 }
             }
@@ -103,11 +98,6 @@ namespace BiggerLobby.Patches
                     codes[i].opcode = OpCodes.Call;
                     codes[i].operand = _realPlayerScriptsMethod;
                 }
-            }
-
-            foreach(var code in codes)
-            {
-                Debug.Log(code);
             }
             return codes.Where(x => x.opcode != OpCodes.Nop).AsEnumerable();
         }

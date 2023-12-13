@@ -310,17 +310,6 @@ namespace BiggerLobby.Patches
             return (true);
         }
 
-        [HarmonyPatch(typeof(StartOfRound), "SyncShipUnlockablesClientRpc")]
-        [HarmonyPrefix]
-
-        public static bool SyncShipUnlockablesClientRpc(StartOfRound __instance, int[] playerSuitIDs, bool shipLightsOn, UnityEngine.Vector3[] placeableObjectPositions, UnityEngine.Vector3[] placeableObjectRotations, int[] placeableObjects, int[] storedItems, int[] scrapValues, int[] itemSaveData)
-        {
-            Debug.Log("INITIAL ARRAY LENGTHS");
-            Debug.Log(__instance.allPlayerScripts.Length);
-            Debug.Log(playerSuitIDs.Length);
-            return true;
-        }
-
         [HarmonyPatch(typeof(ManualCameraRenderer), "Awake")]
         [HarmonyPrefix]
 
