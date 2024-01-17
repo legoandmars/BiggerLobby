@@ -57,11 +57,11 @@ namespace BiggerLobby.Patches
         {
             // __instance.endgameStatsAnimator = UnityEngine.Object.Instantiate(__instance.endgameStatsAnimator);//lmao trolled
             // NOTE: __instance.playerLevels.Length is 5 by default!
-            __instance.playerLevels = Helper.ResizeArray(__instance.playerLevels, Plugin.MaxPlayers + 1);
-            for (int j = 4; j < Plugin.MaxPlayers; j++)
-            {
-                __instance.playerLevels[j] = new PlayerLevel();
-            }
+            // __instance.playerLevels = Helper.ResizeArray(__instance.playerLevels, Plugin.MaxPlayers + 1);
+            // for (int j = 4; j < Plugin.MaxPlayers; j++)
+            // {
+            //    __instance.playerLevels[j] = new PlayerLevel();
+            //}
         }
 
         [HarmonyPatch(typeof(SoundManager), "Awake")]

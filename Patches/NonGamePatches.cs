@@ -311,7 +311,7 @@ namespace BiggerLobby.Patches
                 {
                     if (playerState.sprite != __instance.statsUIElements.aliveIcon) continue;
                     playerState.sprite = replacementCheckmark;
-                }
+               }
             }
         }
 
