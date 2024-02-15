@@ -40,7 +40,7 @@ namespace BiggerLobby
             _harmony.PatchAll(typeof(Patches.NonGamePatches.InternalPatches));
             _harmony.PatchAll(typeof(Patches.NonGamePatches.InternalPatches2));
             Plugin.CustomNetObjects.Clear();
-            Plugin._harmony2.PatchAll(typeof(Patches.InternalPatch3));
+            Plugin._harmony2.PatchAll(typeof(Patches.ChatPatches));
             Plugin._harmony2.PatchAll(typeof(Patches.ListSizeTranspilers));
             Plugin._harmony2.PatchAll(typeof(Patches.PlayerObjects));
             Logger.LogInfo($"{PluginInfo.PLUGIN_GUID} loaded");
