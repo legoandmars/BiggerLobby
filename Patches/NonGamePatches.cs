@@ -182,46 +182,62 @@ namespace BiggerLobby.Patches
         }
         [HarmonyPatch(typeof(MenuManager), "OnEnable")]
         [HarmonyPostfix]
+        [HarmonyWrapSafe]
         public static void CustomMenu(ref MenuManager __instance)
         {
             if (__instance.isInitScene)
             {
                 return;
             }
-            GameObject p = __instance.HostSettingsOptionsNormal.transform.parent.parent.gameObject;
-            RectTransform rt = p.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p2 = p.transform.Find("PrivatePublicDescription").gameObject;
-            RectTransform rt2 = p2.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p3 = __instance.HostSettingsOptionsNormal.transform.Find("EnterAName").gameObject;
-            RectTransform rt3 = p3.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p4 = __instance.HostSettingsOptionsNormal.transform.Find("ServerNameField").gameObject;
-            RectTransform rt4 = p4.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p5 = p.transform.Find("Confirm").gameObject;
-            RectTransform rt5 = p5.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p6 = p.transform.Find("Back").gameObject;
-            RectTransform rt6 = p6.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p7 = __instance.HostSettingsOptionsNormal.transform.Find("Public").gameObject;
-            RectTransform rt7 = p7.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p8 = __instance.HostSettingsOptionsNormal.transform.Find("Private").gameObject;
-            RectTransform rt8 = p8.GetComponent(typeof(RectTransform)) as RectTransform;
-            GameObject p9 = UnityEngine.Object.Instantiate(p4, p4.transform.parent);
-            RectTransform rt9 = p9.GetComponent(typeof(RectTransform)) as RectTransform;
-            rt.sizeDelta = new UnityEngine.Vector2(rt.sizeDelta.x, 200);
-            rt2.anchoredPosition = new UnityEngine.Vector2(rt2.anchoredPosition.x, -50);
-            rt3.anchoredPosition = new UnityEngine.Vector2(rt3.anchoredPosition.x, 40);
-            rt4.anchoredPosition = new UnityEngine.Vector2(rt4.anchoredPosition.x, 55);
-            rt5.anchoredPosition = new UnityEngine.Vector2(rt5.anchoredPosition.x, -60);
-            rt6.anchoredPosition = new UnityEngine.Vector2(rt6.anchoredPosition.x, -85);
-            rt7.anchoredPosition = new UnityEngine.Vector2(rt7.anchoredPosition.x, -23);
-            rt8.anchoredPosition = new UnityEngine.Vector2(rt8.anchoredPosition.x, -23);
-            rt9.anchoredPosition = new UnityEngine.Vector2(rt9.anchoredPosition.x, 21);
-            rt9.name = "ServerPlayersField";
-            rt9.GetComponent<TMP_InputField>().contentType = TMP_InputField.ContentType.IntegerNumber;
-            rt9.transform.Find("Text Area").Find("Placeholder").gameObject.GetComponent<TextMeshProUGUI>().text = "Max players (16)...";
-            rt9.transform.parent = __instance.HostSettingsOptionsNormal.transform;
+
+            float spacingAmount = 30f;
+
+            // Get references to all main menu UI objects we need to modify
+            var hostSettingsContainer = __instance.HostSettingsOptionsNormal.transform.parent.parent.gameObject?.GetComponent<RectTransform>();
+            var lobbyHostOptions = hostSettingsContainer?.Find("LobbyHostOptions")?.GetComponent<RectTransform>();
+            var optionsNormal = lobbyHostOptions?.Find("OptionsNormal")?.GetComponent<RectTransform>();
+
+            if (hostSettingsContainer == null || lobbyHostOptions == null || optionsNormal == null)
+                return;
+
+            var serverNameField = optionsNormal?.Find("ServerNameField")?.GetComponent<RectTransform>();
+            var serverTagInputField = optionsNormal?.Find("ServerTagInputField")?.GetComponent<RectTransform>();
+            var confirmButton = hostSettingsContainer?.Find("Confirm")?.GetComponent<RectTransform>();
+            var backButton = hostSettingsContainer?.Find("Back")?.GetComponent<RectTransform>();
+            var privatePublicDescription = hostSettingsContainer?.Find("PrivatePublicDescription")?.GetComponent<TextMeshProUGUI>();
+
+            if (serverNameField == null || serverTagInputField == null || confirmButton == null || backButton == null || privatePublicDescription == null)
+                return;
+
+            // Create new field for user-inputted player counts
+            var playerNumberField = UnityEngine.Object.Instantiate(serverNameField, serverNameField.transform.parent);
+            var playerNumberInputField = playerNumberField.GetComponent<TMP_InputField>();
+
+            // Resize and reposition UI elements to fit the new field
+            hostSettingsContainer.sizeDelta = hostSettingsContainer.sizeDelta + new Vector2(0, spacingAmount / 2f);
+            lobbyHostOptions.anchoredPosition = lobbyHostOptions.anchoredPosition + new Vector2(0, spacingAmount / 4f);
+            serverTagInputField.anchoredPosition = serverTagInputField.anchoredPosition + new Vector2(0, -spacingAmount / 2f);
+            confirmButton.anchoredPosition = confirmButton.anchoredPosition + new Vector2(0, -spacingAmount / 2f);
+            backButton.anchoredPosition = backButton.anchoredPosition + new Vector2(0, -spacingAmount / 2f);
+
+            foreach (RectTransform transform in optionsNormal)
+            {
+                if (transform == null || transform.name == "EnterAName" || transform == serverNameField || transform == serverTagInputField) 
+                    continue;
+
+                transform.anchoredPosition = transform.anchoredPosition + new Vector2(0, -spacingAmount);
+                // Specifically make the tag 
+            }
+
+            // Finish setting up custom players field
+            // TODO: Clean this bit up, it's still mostly legacy code
+            playerNumberField.name = "ServerPlayersField";
+            playerNumberInputField.contentType = TMP_InputField.ContentType.IntegerNumber;
+            playerNumberField.transform.Find("Text Area").Find("Placeholder").gameObject.GetComponent<TextMeshProUGUI>().text = "Max players (16)...";
+
             void OnChange()
             {
-                string text = Regex.Replace(rt9.GetComponent<TMP_InputField>().text, "[^0-9]", "");
+                string text = Regex.Replace(playerNumberInputField.text, "[^0-9]", "");
                 int newnumber;
                 if (!(int.TryParse(text, out newnumber)))
                 {
@@ -231,18 +247,18 @@ namespace BiggerLobby.Patches
                 Plugin.Logger?.LogInfo($"Setting max player count to: {newnumber}");
                 if (newnumber > 16)
                 {
-                    p2.GetComponent<TextMeshProUGUI>().text = "Notice: High max player counts\nmay cause lag.";
+                    privatePublicDescription.text = "Notice: High max player counts\nmay cause lag.";
                 }
                 else
                 {
-                    if (p2.GetComponent<TextMeshProUGUI>().text == "Notice: High max player counts\nmay cause lag.")
+                    if (privatePublicDescription.text == "Notice: High max player counts\nmay cause lag.")
                     {
-                        p2.GetComponent<TextMeshProUGUI>().text = "yeah you should be good now lol";
+                        privatePublicDescription.text = "yeah you should be good now lol";
                     }
                 }
 
             }
-            rt9.GetComponent<TMP_InputField>().onValueChanged.AddListener(delegate { OnChange();  });
+            playerNumberInputField.onValueChanged.AddListener(delegate { OnChange(); });
         }
         [HarmonyPatch(typeof(MenuManager), "StartHosting")]
         [HarmonyPrefix]
