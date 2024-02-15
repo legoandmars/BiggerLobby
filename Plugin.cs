@@ -11,6 +11,7 @@ using UnityEngine.Audio;
 using Unity.Collections;
 using BepInEx.Configuration;
 using System.Linq;
+using BepInEx.Logging;
 
 namespace BiggerLobby 
 {
@@ -28,12 +29,15 @@ namespace BiggerLobby
         public static ConfigEntry<int>? _LoudnessMultiplier;
         public static bool Initialized = false;
 
+        internal new static ManualLogSource? Logger { get; set; }
+
         public static IDictionary<uint, NetworkObject> CustomNetObjects = new Dictionary<uint, NetworkObject> { };
         private void Awake()
         {
             Instance = this;
             _LoudnessMultiplier =
             Config.Bind("General", "Player loudness", 1, "Default player loudness");
+            Logger = base.Logger;
             _harmony = new Harmony(PluginInfo.PLUGIN_GUID);//todo: patch non menu changes only when lobby joined, then unpatch them after.
             _harmony2 = new Harmony(PluginInfo.PLUGIN_GUID + "A");
             _harmony.PatchAll(typeof(Patches.NonGamePatches));
@@ -44,7 +48,6 @@ namespace BiggerLobby
             Plugin._harmony2.PatchAll(typeof(Patches.ListSizeTranspilers));
             Plugin._harmony2.PatchAll(typeof(Patches.PlayerObjects));
             Logger.LogInfo($"{PluginInfo.PLUGIN_GUID} loaded");
-            LC_API.BundleAPI.BundleLoader.OnLoadedAssets += OnLoaded;
         }
 
         private void Start()
@@ -67,25 +70,13 @@ namespace BiggerLobby
             }
         }
 
-        private void OnLoaded()
-        {
-            AudioMixer Mixer = LC_API.BundleAPI.BundleLoader.GetLoadedAsset<AudioMixer>("assets/diagetic.mixer");
-            if (!Mixer)
-            {
-                return;
-            }
-            
-        }
-
         public static int GetPlayerCount()
         {
-            // Debug.Log("GETTING MAX PLAyERS");
             return MaxPlayers;
         }
 
         public static int GetPlayerCountMinusOne()
         {
-            // Debug.Log("Getting max players -1");
             return MaxPlayers - 1;
         }
 

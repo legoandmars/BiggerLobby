@@ -166,8 +166,6 @@ namespace BiggerLobby.Patches
                     __instance.playerVoiceVolumes[j] = 1f;
                     continue;
                 }
-                //Debug.Log(__instance.playerVoiceVolumes[j].ToString() + $"PlayerVolume{j}"); dont do this shit its annoying 
-                //__instance.diageticMixer.SetFloat($"PlayerVolume{j}", 16f * __instance.playerVoiceVolumes[j]);
                 if (StartOfRound.Instance.allPlayerScripts[j].voicePlayerState != null) {
                     (typeof(Dissonance.Audio.Playback.VoicePlayback).GetProperty("Dissonance.Audio.Playback.IVoicePlaybackInternal.PlaybackVolume", BindingFlags.NonPublic | BindingFlags.Instance)).SetValue(StartOfRound.Instance.allPlayerScripts[j].currentVoiceChatIngameSettings._playbackComponent, Mathf.Clamp((SoundManager.Instance.playerVoiceVolumes[j] + 1) * (2 * Plugin._LoudnessMultiplier.Value), 0f, 1f));
                 }
@@ -224,14 +222,13 @@ namespace BiggerLobby.Patches
             void OnChange()
             {
                 string text = Regex.Replace(rt9.GetComponent<TMP_InputField>().text, "[^0-9]", "");
-                Debug.Log(text);
                 int newnumber;
                 if (!(int.TryParse(text, out newnumber)))
                 {
                     newnumber = 16;
                 }
                 newnumber = Math.Min(Math.Max(newnumber, 4), 40);
-                Debug.Log(newnumber);
+                Plugin.Logger?.LogInfo($"Setting max player count to: {newnumber}");
                 if (newnumber > 16)
                 {
                     p2.GetComponent<TextMeshProUGUI>().text = "Notice: High max player counts\nmay cause lag.";
@@ -267,7 +264,7 @@ namespace BiggerLobby.Patches
             newnumber = Math.Min(Math.Max(newnumber, 4), 40);
             Lobby lobby = GameNetworkManager.Instance.currentLobby ?? new Lobby();
             lobby.SetData("MaxPlayers", newnumber.ToString());
-            Debug.Log($"SETTING MAX PLAYERS TO {newnumber}!");
+            Plugin.Logger?.LogInfo($"Setting max players to {newnumber}!");
             Plugin.MaxPlayers = newnumber;
             if (GameNetworkManager.Instance != null) GameNetworkManager.Instance.maxAllowedPlayers = Plugin.MaxPlayers;
             return (true);
@@ -287,7 +284,7 @@ namespace BiggerLobby.Patches
             __instance.statsUIElements.playerStates = statsList.States.ToArray();
             __instance.statsUIElements.playerNotesText = statsList.Notes.ToArray();
 
-            Debug.Log("Adding EXPANDED stats!");
+            Plugin.Logger?.LogInfo("Adding EXPANDED stats!");
         }
 
         [HarmonyPatch(typeof(HUDManager), "FillEndGameStats")]
@@ -334,7 +331,7 @@ namespace BiggerLobby.Patches
         public static bool StartAClient()
         {
             Plugin.CustomNetObjects.Clear();
-            Debug.Log("LanRunningggg!");
+            Plugin.Logger?.LogInfo("LAN Running.");
             return (true);
         }
         [HarmonyPatch(typeof(SteamLobbyManager), "loadLobbyListAndFilter")]
@@ -347,7 +344,7 @@ namespace BiggerLobby.Patches
 
             // Ideally this would happen as the enumerator executes but I just want to get something working RN
             // inject into existing server list 
-            Debug.Log("Injecting BL playercounts into lobby list.");
+            Plugin.Logger?.LogInfo("Injecting BL playercounts into lobby list.");
             LobbySlot[] lobbySlots = __instance.levelListContainer.GetComponentsInChildren<LobbySlot>(true);
 
             foreach(var lobbySlot in lobbySlots)
@@ -367,8 +364,8 @@ namespace BiggerLobby.Patches
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning("Exception while injecting BL lobby metadata:");
-                    Debug.LogWarning(ex);
+                    Plugin.Logger?.LogWarning("Exception while injecting BL lobby metadata:");
+                    Plugin.Logger?.LogWarning(ex);
                 }
             }
         }
@@ -507,7 +504,7 @@ namespace BiggerLobby.Patches
                 return false;
             }
             Plugin.MaxPlayers = newnumber;
-            Debug.Log($"SETTING MAX PLAYERS TO {newnumber}!");
+            Plugin.Logger?.LogInfo($"Setting max players to {newnumber}!");
             if (__instance != null) __instance.maxAllowedPlayers = Plugin.MaxPlayers;
             // Lobby member count check is skipped here, see original method
             __result = true;

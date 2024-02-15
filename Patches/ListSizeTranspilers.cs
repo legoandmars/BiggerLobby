@@ -78,7 +78,6 @@ namespace BiggerLobby.Patches
                 {
                     codes[i].opcode = OpCodes.Call;
                     codes[i].operand = _playerCountMinusOneMethod; //lmfao
-                    Debug.Log("Kick Fix Applied");
                     break;
                 }
             }
